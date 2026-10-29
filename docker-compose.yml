@@ -1,0 +1,87 @@
+#전부 수 정 예 정
+
+version: '3.8'
+
+services:
+  spring-gateway:
+    build:
+      context: ./scg
+      dockerfile: Dockerfile
+    container_name: scg-container
+    ports:
+      - "8080:8080"
+    depends_on:
+      - fastapi-node-1
+      - fastapi-node-2
+      - react-front
+    environment:
+      - API_KEY=${API_KEY}
+      - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost,http://localhost:80,http://localhost:3000,http://localhost:5173,http://localhost:8080,http://127.0.0.1,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8080}
+    networks:
+      - backend-network
+
+  react-front:
+    build:
+      context: ./front/my-react-front
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    container_name: react-container
+    ports:
+      - "80:80"
+    networks:
+      - backend-network
+
+  fastapi-node-1:
+    build:
+      context: ./fastapi/fastapi_1
+      dockerfile: Dockerfile
+    container_name: fastapi-container-1
+    ports:
+      - "8001:8000"
+    environment:
+      - SERVER_NAME=FastAPI-Server-1
+      - API_KEY=${API_KEY}
+      - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost,http://localhost:80,http://localhost:3000,http://localhost:5173,http://localhost:8080,http://127.0.0.1,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8080}
+      - MONGO_DETAILS=${MONGO_DETAILS}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-false}
+      - HF_HOME=/root/.cache/huggingface
+      - HF_TOKEN=${HF_TOKEN}
+    networks:
+      - backend-network
+    volumes:
+      - ./fastapi/fastapi_1:/app
+      - thumbnail_data:/app/thumbnails
+      - hf_cache:/root/.cache/huggingface
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+
+  fastapi-node-2:
+    build:
+      context: ./fastapi/fastapi_1
+      dockerfile: Dockerfile
+    container_name: fastapi-container-2
+    ports:
+      - "8002:8000"
+    environment:
+      - SERVER_NAME=FastAPI-Server-2
+      - API_KEY=${API_KEY}
+      - FRONTEND_ORIGINS=${FRONTEND_ORIGINS:-http://localhost,http://localhost:80,http://localhost:3000,http://localhost:5173,http://localhost:8080,http://127.0.0.1,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8080}
+      - MONGO_DETAILS=${MONGO_DETAILS}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-false}
+      - HF_HOME=/root/.cache/huggingface
+      - HF_TOKEN=${HF_TOKEN}
+    networks:
+      - backend-network
+    volumes:
+      - ./fastapi/fastapi_1:/app
+      - thumbnail_data:/app/thumbnails
+      - hf_cache:/root/.cache/huggingface
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  thumbnail_data:
+  hf_cache:
