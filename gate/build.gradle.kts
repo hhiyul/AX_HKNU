@@ -28,7 +28,6 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 	implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux")
-	implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc")
 	testImplementation("org.springframework.boot:spring-boot-starter-actuator-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("io.projectreactor:reactor-test")
