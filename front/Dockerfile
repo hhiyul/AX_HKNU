@@ -1,25 +1,20 @@
-#전부 수 정 예 정
-FROM python:3.10-slim
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# OpenCV 및 시스템 그래픽 라이브러리 설치 (Bookworm 대응)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    libxcb1 \
-    libx11-xcb1 \
-    && rm -rf /var/lib/apt/lists/*
-
-# 파이썬 의존성 설치
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package*.json ./
+RUN npm ci
 
 COPY . .
 
-EXPOSE 8000
+# Vite는 빌드 시점에 환경변수를 번들에 박아 넣음
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+FROM nginx:1.27-alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80

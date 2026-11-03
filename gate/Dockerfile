@@ -1,25 +1,20 @@
-#전부 수 정 예 정
-FROM python:3.10-slim
+FROM eclipse-temurin:17-jdk AS build
+
+WORKDIR /workspace
+
+COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradle gradle
+RUN chmod +x gradlew && ./gradlew --no-daemon dependencies > /dev/null
+
+COPY src src
+RUN ./gradlew --no-daemon bootJar -x test
+
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# OpenCV 및 시스템 그래픽 라이브러리 설치 (Bookworm 대응)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    libxcb1 \
-    libx11-xcb1 \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /workspace/build/libs/*.jar app.jar
 
-# 파이썬 의존성 설치
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8080
 
-COPY . .
-
-EXPOSE 8000
-
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
