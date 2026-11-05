@@ -15,9 +15,18 @@ def pytest_configure():
         pytest.exit(f"테스트는 {TEST_MONGO_HOST}에서만 실행합니다.", returncode=2)
 
 
+def load_init_db():
+    # init_db.py는 git에 없으므로, 없을 때 전부 건너뛰어 성공처럼 보이지 않게 멈춘다.
+    try:
+        import init_db
+    except ImportError:
+        pytest.exit("backend/init_db.py가 있어야 테스트를 실행할 수 있습니다.", returncode=2)
+    return init_db
+
+
 @pytest.fixture(scope="session", autouse=True)
 def schema():
-    init_db = pytest.importorskip("init_db")
+    init_db = load_init_db()
     from pymongo import MongoClient
 
     with MongoClient(os.environ["MONGO_DETAILS"]) as client:
