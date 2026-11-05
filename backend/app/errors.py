@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pymongo.errors import ConnectionFailure
 from starlette.exceptions import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,12 @@ def register_error_handlers(app: FastAPI) -> None:
     async def handle_http_error(_: Request, exc: HTTPException):
         code = HTTP_ERROR_CODES.get(exc.status_code, f"HTTP_{exc.status_code}")
         return error_response(exc.status_code, code, str(exc.detail))
+
+    @app.exception_handler(ConnectionFailure)
+    async def handle_db_connection_error(request: Request, exc: ConnectionFailure):
+        # 연결 문자열 오타나 Atlas IP 미등록일 때 원인을 찾기 쉽게 구분한다.
+        logger.error("DB 연결 실패: %s %s (%s)", request.method, request.url.path, type(exc).__name__)
+        return error_response(503, "DB_UNAVAILABLE", "DB에 연결할 수 없습니다.")
 
     @app.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, exc: Exception):
