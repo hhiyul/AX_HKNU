@@ -12,14 +12,24 @@ anyio==4.15.1
     # via
     #   httpx
     #   starlette
+argon2-cffi==25.1.0
+    # via -r requirements.in
+argon2-cffi-bindings==26.1.0
+    # via argon2-cffi
 certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
+cffi==2.1.1
+    # via argon2-cffi-bindings
 click==8.5.0
     # via uvicorn
 dnspython==2.9.1
-    # via pymongo
+    # via
+    #   email-validator
+    #   pymongo
+email-validator==2.3.0
+    # via -r requirements.in
 fastapi==0.162.0
     # via -r requirements.in
 h11==0.16.0
@@ -33,9 +43,12 @@ httpx==0.28.1
 idna==3.20
     # via
     #   anyio
+    #   email-validator
     #   httpx
 opentelemetry-api==1.45.2
     # via fastapi
+pycparser==3.12
+    # via cffi
 pydantic==2.14.2
     # via
     #   -r requirements.in
@@ -44,6 +57,8 @@ pydantic==2.14.2
 pydantic-core==2.50.2
     # via pydantic
 pydantic-settings==2.16.2
+    # via -r requirements.in
+pyjwt==2.15.1
     # via -r requirements.in
 pymongo==4.19.0
     # via -r requirements.in
