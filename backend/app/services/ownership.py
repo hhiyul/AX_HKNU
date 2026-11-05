@@ -30,3 +30,12 @@ async def get_owned_project(db: AsyncDatabase, user_id: ObjectId, project_id: st
         raise not_found()
     await get_owned_brand(db, user_id, project["brand_id"])
     return project
+
+
+async def get_owned_asset(db: AsyncDatabase, user_id: ObjectId, asset_id: str) -> dict:
+    # 파일에도 user_id가 없으므로 소속 브랜드로 판단한다.
+    asset = await db.assets.find_one({"_id": parse_object_id(asset_id)})
+    if asset is None:
+        raise not_found()
+    await get_owned_brand(db, user_id, asset["brand_id"])
+    return asset
