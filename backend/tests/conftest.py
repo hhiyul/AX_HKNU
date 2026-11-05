@@ -45,3 +45,16 @@ async def client(db):
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as http:
         yield http
+
+
+async def signup(http, email="a@test.com", password="password123", creator_name="창작자"):
+    res = await http.post(
+        "/auth/signup", json={"email": email, "password": password, "creator_name": creator_name}
+    )
+    assert res.status_code == 201, res.text
+    return res.json()
+
+
+@pytest.fixture
+def login():
+    return signup

@@ -15,7 +15,7 @@ def get_db() -> AsyncDatabase:
     if not uri:
         raise AppError(503, "DB_NOT_CONFIGURED", "DB 연결이 설정되지 않았습니다.")
     if _client is None:
-        _client = AsyncMongoClient(uri, serverSelectionTimeoutMS=10000)
+        _client = AsyncMongoClient(uri, serverSelectionTimeoutMS=10000, tz_aware=True)
     return _client.get_default_database(default=DEFAULT_DB_NAME)
 
 
