@@ -39,6 +39,11 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     environment:
       MONGO_DETAILS: "${MONGO_DETAILS:-}"
+      JWT_SECRET: "${JWT_SECRET:-}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - backend_uploads:/data/uploads
     healthcheck:
       test:
         - CMD
@@ -55,3 +60,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  backend_uploads:

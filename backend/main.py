@@ -1,6 +1,19 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-app = FastAPI()
+from app.db import close_db
+from app.errors import register_error_handlers
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    await close_db()
+
+
+app = FastAPI(lifespan=lifespan)
+register_error_handlers(app)
 
 #연결테스트 코드
 #localhost:8080/api/ 게이트 > 백엔드  | localhost:8000/docs swagger | localhost:8080/actuator/health  게이트웨이 | localhost:8000/hello/hknu 백엔드 직접 | localhost 프론트
@@ -13,3 +26,6 @@ async def root():
 @app.get("/hello/{name}")
 async def say_hello(name: str):
     return {"message": f"Hello {name}"}
+
+
+
