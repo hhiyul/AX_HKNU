@@ -133,3 +133,9 @@ async def test_delete_brand_blocked_by_project(client, login):
     assert (await client.delete(f"/projects/{project['id']}")).status_code == 204
     assert (await client.delete(f"/brands/{brand['id']}")).status_code == 204
     assert (await client.get(f"/brands/{brand['id']}")).status_code == 404
+
+
+async def test_text_length_limits(client, login):
+    await login(client)
+    assert (await client.post("/brands", json={"brand_type": "new", "name": "x" * 201})).status_code == 422
+    assert (await client.post("/brands", json={"brand_type": "new", "keywords": ["x" * 101]})).status_code == 422
