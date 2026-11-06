@@ -8,6 +8,8 @@
 
 | 문서 | 역할 |
 | --- | --- |
+| [Grill 기능 결정표](grill-feature-decisions.md) | 기둥·가지질문별 사용자 채택 결과·유지 조건·잔여·현재 진행 위치를 먼저 기록. 정본 통합·모듈 명세 반영은 후속 |
+| [GrillMe 행동 방침과 질문 트리](grillme-operating-policy.md) | 기둥질문 우선 순회 → 필요한 가지질문 → 공동·물리 계약 순서, 질문·반례 검토·결정 선기록 기준과 현재 진행 상태 |
 | [모듈 기능명세 v0.1](ai-pipeline-module-feature-spec-v0.1.md) | M-01~08 책임 개요, 13절의 M-01/06 타입·포트·상태·오류·실제 payload/파싱, 13.11~12의 발송 전 검증·CT-01~24/AD-01~10 시험 기대값, MC-01~12 진행 상태 |
 | [사용자 기능명세 v0.2](../02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) | UF-AI-01~16·D-UF-001~109·보류/공동/제외 범위의 사용자 기능 단일 정본 |
 | [모듈 전환 HandOff](../handoffs/2026-11-06-module-spec-handoff.md) · [다음 세션 프롬프트](../handoffs/2026-11-06-next-session-prompt.md) | 현행 작업 트리·소스·Figma 근거·남은 결정·진행 경계 |
