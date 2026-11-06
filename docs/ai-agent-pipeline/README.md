@@ -7,10 +7,10 @@ AI 채팅 파이프라인·평가와 제안·도구 호출·에이전트 루프�
 | 순서 | 문서·계층 | 역할·현재 상태 |
 | --- | --- | --- |
 | 먼저 | [모듈 명세 전환 HandOff](handoffs/2026-11-06-module-spec-handoff.md) · [다음 세션 프롬프트](handoffs/2026-11-06-next-session-prompt.md) | 현재 작업 트리·합의·잔여·백엔드·진행/중단 경계의 인계 스냅샷 |
-| 1 | [시스템 기능명세](01-system-feature-spec/README.md) | 팀원 작성 대기. 전체 범위·권한·공통 데이터와 상위 기능 ID는 연결 대기 |
-| 2 | [사용자 기능명세 v0.2](02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) | UF-AI-01~16·D-UF-001~108·미정/제외 범위를 포함하는 사용자 기능 단일 정본 |
+| 1 | [시스템 기능명세](01-system-feature-spec/README.md) | React+Vite / Python 3.11 / Spring Gateway / MongoDB 기반과 팀원 API를 호출하는 AI 어댑터 경계 확인. 상세 범위·권한·API는 팀원 제공 대기 |
+| 2 | [사용자 기능명세 v0.2](02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) | UF-AI-01~16·D-UF-001~109·미정/제외 범위를 포함하는 사용자 기능 단일 정본. MVP 대화·압축 모델 OpenAI `gpt-6-luna` 지정 |
 | 작성 형식 | [기능코드별 사용자 기능명세 템플릿](02-user-feature-spec/user-feature-spec-template.md) | 기능별 8개 항목으로 목적·흐름·입출력·예외·논리 데이터·상태를 연결하는 공통 형식 |
-| 3 | [모듈 기능명세 v0.1](03-module-feature-spec/ai-pipeline-module-feature-spec-v0.1.md) | M-01~08 책임·논리 계약·단위검증 기준 초안, MC-01~12 물리 계약 검토 대기 |
+| 3 | [모듈 기능명세 v0.1](03-module-feature-spec/ai-pipeline-module-feature-spec-v0.1.md) | M-01~08 책임 개요, 13절의 M-01/06 자료 획득→허용 입력→Provider payload/파싱·압축/예산·발송 전 검증·시험 기대값. Python 3.11/API 경유 확인, 실제 공통 API·일부 어댑터 OPEN, 구현·시험 NOT_RUN |
 | 이력 | [사용자 기능 정리·완료 계획](02-user-feature-spec/user-feature-closure-plan.md) · [이관 대장](03-module-feature-spec/deferred-design-contracts.md) | 과거 우선순위·결정 경위. 현행 동작/잔여의 판정은 v0.2 우선 |
 | 참고 | [프로토타입·Figma 분석](00-prototype-analysis/README.md) | 코드·화면 관찰, 사용자 정정, 현행 요구와 폐기된 흔적의 구분 |
 
