@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from pymongo import ReturnDocument
 from pymongo.asynchronous.collection import AsyncCollection
+from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
 
@@ -20,3 +21,10 @@ async def save_changes(collection: AsyncCollection, document: dict, changes: dic
         {"$set": {**changes, "updated_at": datetime.now(timezone.utc)}},
         return_document=ReturnDocument.AFTER,
     )
+
+
+async def remove_jobs(db: AsyncDatabase, query: dict, in_use: AppError) -> None:
+    """삭제할 브랜드·상품의 작업 기록을 함께 지운다. 진행 중인 작업이 있으면 막는다."""
+    if await db.ai_jobs.find_one({**query, "status": {"$in": ["queued", "running"]}}):
+        raise in_use
+    await db.ai_jobs.delete_many(query)

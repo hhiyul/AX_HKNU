@@ -55,6 +55,8 @@ async def create_asset(
     mime_type = detect_mime_type(data, file.content_type)
     if mime_type is None:
         raise AppError(422, "INVALID_ASSET", "TXT, PNG, JPEG, WebP 파일만 올릴 수 있습니다.")
+    if asset_type != "document" and not mime_type.startswith("image/"):
+        raise AppError(422, "INVALID_ASSET", "로고·배너·상품 이미지는 PNG, JPEG, WebP 파일만 올릴 수 있습니다.")
 
     asset_id = ObjectId()
     now = datetime.now(timezone.utc)
@@ -80,9 +82,10 @@ async def create_asset(
     return asset
 
 
-async def list_assets(db: AsyncDatabase, user_id: ObjectId, brand_id: str) -> list[dict]:
+async def list_assets(db: AsyncDatabase, user_id: ObjectId, brand_id: str, page) -> list[dict]:
     brand = await get_owned_brand(db, user_id, brand_id)
-    return await db.assets.find({"brand_id": brand["_id"]}).sort("created_at", -1).to_list()
+    cursor = db.assets.find({"brand_id": brand["_id"]}).sort("created_at", -1)
+    return await cursor.skip(page.skip).limit(page.limit).to_list()
 
 
 async def delete_asset(db: AsyncDatabase, user_id: ObjectId, asset_id: str) -> None:
