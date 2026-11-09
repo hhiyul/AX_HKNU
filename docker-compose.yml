@@ -1,32 +1,18 @@
 services:
-  spring-gateway:
-    build:
-      context: ./gate
-      dockerfile: Dockerfile
-    ports:
-      - "${GATEWAY_PORT:-8080}:8080"
-    environment:
-      SERVER_PORT: "8080"
-      # 컨테이너 네트워크 안에서는 서비스 이름으로 접근
-      BACKEND_URL: "${BACKEND_URL:-http://backend:8000}"
-      FRONTEND_ORIGINS: "${FRONTEND_ORIGINS:-http://localhost,http://localhost:80,http://localhost:5173,http://127.0.0.1}"
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - app-network
-
+  # 화면과 API의 입구. nginx가 /api/** 를 backend로 넘긴다 (front/nginx.conf).
+  # gate/ 의 Spring 게이트웨이는 지금 쓰지 않는다.
   react-front:
     build:
       context: ./front
       dockerfile: Dockerfile
       args:
-        # 브라우저에서 호출하는 주소이므로 호스트 기준 게이트웨이 주소
-        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8080/api}"
+        # 화면과 같은 주소의 /api 를 호출한다.
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-/api}"
     ports:
       - "${FRONTEND_PORT:-80}:80"
     depends_on:
-      - spring-gateway
+      backend:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -34,7 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    # 디버깅용 직접 접근 (평소엔 게이트웨이 /api 경유)
+    # 디버깅용 직접 접근 (Swagger). 평소엔 react-front의 /api 경유
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     environment:

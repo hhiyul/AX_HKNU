@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db import get_db
-from app.deps import current_user
+from app.deps import Page, current_user
 from app.schemas.common import to_api
 from app.schemas.projects import ProjectCreate, ProjectOut, ProjectUpdate
 from app.services import projects as service
@@ -17,9 +17,12 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 @router.get("", response_model=list[ProjectOut])
 async def list_projects(
-    brand_id: str | None = None, user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)
+    brand_id: str | None = None,
+    page: Page = Depends(),
+    user: dict = Depends(current_user),
+    db: AsyncDatabase = Depends(get_db),
 ):
-    return to_api(await service.list_projects(db, user["_id"], brand_id))
+    return to_api(await service.list_projects(db, user["_id"], brand_id, page))
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)

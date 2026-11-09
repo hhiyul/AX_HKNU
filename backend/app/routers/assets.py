@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db import get_db
-from app.deps import current_user
+from app.deps import Page, current_user
 from app.errors import AppError
 from app.schemas.assets import AssetOut, AssetType
 from app.schemas.common import to_api
@@ -18,8 +18,13 @@ router = APIRouter(prefix="/assets", tags=["assets"])
 
 
 @router.get("", response_model=list[AssetOut])
-async def list_assets(brand_id: str, user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)):
-    return to_api(await service.list_assets(db, user["_id"], brand_id))
+async def list_assets(
+    brand_id: str,
+    page: Page = Depends(),
+    user: dict = Depends(current_user),
+    db: AsyncDatabase = Depends(get_db),
+):
+    return to_api(await service.list_assets(db, user["_id"], brand_id, page))
 
 
 @router.post("", response_model=AssetOut, status_code=status.HTTP_201_CREATED)

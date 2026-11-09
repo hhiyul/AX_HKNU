@@ -5,7 +5,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
 from app.schemas.projects import ProjectCreate, ProjectUpdate
-from app.services.drafts import ensure_completable, save_changes
+from app.services.drafts import ensure_completable, remove_jobs, save_changes
 from app.services.ownership import get_owned_brand, get_owned_project
 
 
@@ -29,12 +29,13 @@ async def create_project(db: AsyncDatabase, user_id: ObjectId, body: ProjectCrea
     return project
 
 
-async def list_projects(db: AsyncDatabase, user_id: ObjectId, brand_id: str | None) -> list[dict]:
+async def list_projects(db: AsyncDatabase, user_id: ObjectId, brand_id: str | None, page) -> list[dict]:
     if brand_id is not None:
         brand_ids = [(await get_owned_brand(db, user_id, brand_id))["_id"]]
     else:
         brand_ids = await db.brands.distinct("_id", {"user_id": user_id})
-    return await db.projects.find({"brand_id": {"$in": brand_ids}}).sort("created_at", -1).to_list()
+    cursor = db.projects.find({"brand_id": {"$in": brand_ids}}).sort("created_at", -1)
+    return await cursor.skip(page.skip).limit(page.limit).to_list()
 
 
 async def update_project(db: AsyncDatabase, user_id: ObjectId, project_id: str, body: ProjectUpdate) -> dict:
@@ -48,4 +49,6 @@ async def delete_project(db: AsyncDatabase, user_id: ObjectId, project_id: str) 
     project = await get_owned_project(db, user_id, project_id)
     if await db.assets.find_one({"project_id": project["_id"]}):
         raise AppError(409, "PROJECT_IN_USE", "상품에 파일이 남아 있습니다.")
+    in_use = AppError(409, "PROJECT_IN_USE", "상품에 진행 중인 작업이 있습니다.")
+    await remove_jobs(db, {"project_id": project["_id"]}, in_use)
     await db.projects.delete_one({"_id": project["_id"]})

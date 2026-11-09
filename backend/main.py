@@ -24,7 +24,7 @@ app.include_router(jobs.router)
 app.include_router(openai_test.router)
 
 #연결테스트 코드
-#localhost:8080/api/ 게이트 > 백엔드  | localhost:8000/docs swagger | localhost:8080/actuator/health  게이트웨이 | localhost:8000/hello/hknu 백엔드 직접 | localhost 프론트
+#localhost/api/ 프론트 nginx > 백엔드  | localhost:8000/docs swagger | localhost:8000/hello/hknu 백엔드 직접 | localhost 프론트
 
 @app.get("/")
 async def root():

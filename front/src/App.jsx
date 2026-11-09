@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import './App.css'
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api').replace(/\/$/, '')
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
 
 // {brand_id} 같은 자리는 아래 "현재 ID" 칸의 값으로 바뀐다.
 const PRESETS = [
