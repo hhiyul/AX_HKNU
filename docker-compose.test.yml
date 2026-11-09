@@ -1,0 +1,29 @@
+# 테스트 전용: 임시 로컬 MongoDB만 사용하고 .env의 Atlas 주소는 넘기지 않는다.
+services:
+  test-mongo:
+    image: mongo:8
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      MONGO_DETAILS: mongodb://test-mongo:27017/ax_test
+      JWT_SECRET: test-secret-at-least-32-bytes-long!!
+      COOKIE_SECURE: "false"
+      UPLOAD_DIR: /tmp/uploads
+      PIP_ROOT_USER_ACTION: ignore
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    depends_on:
+      test-mongo:
+        condition: service_healthy
