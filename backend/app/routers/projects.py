@@ -10,6 +10,10 @@ from app.services.ownership import get_owned_project
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
+# TODO(IA v0.1): 프로젝트 개요 화면용 GET /projects/{project_id}/overview 추가 예정.
+#   기본 정보, 연결 브랜드, 기획 진행 현황, 최근 작업을 모아서 돌려주고 DB에는 따로 저장하지 않는다.
+# TODO(IA v0.1): 경제성(비용 입력·가격 시나리오·계산 결과) API도 이 아래 경로로 추가 예정.
+
 
 @router.get("", response_model=list[ProjectOut])
 async def list_projects(
