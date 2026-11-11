@@ -8,7 +8,8 @@ AssetType = Literal["logo", "banner", "product_image", "document"]
 
 class AssetOut(BaseModel):
     id: str
-    brand_id: str
+    # 브랜드와 프로젝트 중 적어도 하나에 속한다.
+    brand_id: str | None = None
     project_id: str | None = None
     ai_job_id: str | None = None
     asset_type: AssetType

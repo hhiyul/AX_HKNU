@@ -1,9 +1,14 @@
-from fastapi import Depends, Query, Request
+from collections.abc import Awaitable, Callable
+from typing import Any
+
+from fastapi import Depends, Header, Query, Request
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db import get_db
 from app.errors import AppError
 from app.services.auth import COOKIE_NAME, decode_token
+from app.services.idempotency import run_once
+from app.services.ownership import get_owned_project
 
 
 class Page:
@@ -24,3 +29,41 @@ async def current_user(request: Request, db: AsyncDatabase = Depends(get_db)) ->
     if user is None:
         raise unauthorized
     return user
+
+
+async def owned_project(
+    project_id: str, user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)
+) -> dict:
+    return await get_owned_project(db, user["_id"], project_id)
+
+
+class Workspace:
+    """프로젝트 하위 API가 공통으로 쓰는 묶음: 로그인 사용자, DB, 내 프로젝트."""
+
+    def __init__(
+        self,
+        project: dict = Depends(owned_project),
+        user: dict = Depends(current_user),
+        db: AsyncDatabase = Depends(get_db),
+    ):
+        self.project = project
+        self.project_id = project["_id"]
+        self.user_id = user["_id"]
+        self.db = db
+
+
+class Once:
+    """Idempotency-Key 헤더가 있으면 같은 키의 저장 요청을 한 번만 처리한다."""
+
+    def __init__(
+        self,
+        key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=100),
+        user: dict = Depends(current_user),
+        db: AsyncDatabase = Depends(get_db),
+    ):
+        self.key = key
+        self.user_id = user["_id"]
+        self.db = db
+
+    async def run(self, make: Callable[[], Awaitable[Any]]) -> Any:
+        return await run_once(self.db, self.user_id, self.key, make)

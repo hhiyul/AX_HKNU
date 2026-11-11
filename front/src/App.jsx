@@ -22,17 +22,44 @@ const PRESETS = [
     ['완료', 'PATCH', '/brands/{brand_id}', { status: 'completed' }],
     ['삭제', 'DELETE', '/brands/{brand_id}'],
   ]],
-  ['상품', [
+  ['프로젝트', [
     ['목록', 'GET', '/projects'],
-    ['브랜드별 목록', 'GET', '/projects?brand_id={brand_id}'],
-    ['생성', 'POST', '/projects', { brand_id: '{brand_id}', name: '테스트 상품' }],
+    ['생성', 'POST', '/projects', { name: '테스트 프로젝트' }],
     ['조회', 'GET', '/projects/{project_id}'],
-    ['수정', 'PATCH', '/projects/{project_id}', { features: ['경량'], expected_price: 15000, current_step: 'price' }],
-    ['완료', 'PATCH', '/projects/{project_id}', { status: 'completed' }],
+    ['수정', 'PATCH', '/projects/{project_id}', { description: '설명', current_step: 'plan', revision: 1 }],
+    ['브랜드 연결', 'PATCH', '/projects/{project_id}', { brand_id: '{brand_id}', revision: 1 }],
+    ['개요', 'GET', '/projects/{project_id}/overview'],
+    ['AI 맥락', 'GET', '/projects/{project_id}/projection'],
     ['삭제', 'DELETE', '/projects/{project_id}'],
   ]],
+  ['상품기획', [
+    ['6개 항목', 'GET', '/projects/{project_id}/plan'],
+    ['초안 저장', 'PUT', '/projects/{project_id}/plan/ck_01', { kind: 'DRAFT', content: '핫팩 파우치', revision: 0 }],
+    ['확정', 'PUT', '/projects/{project_id}/plan/ck_01', { kind: 'DECIDED', content: '핫팩 파우치', revision: 1 }],
+    ['가격 확정', 'PUT', '/projects/{project_id}/plan/ck_05', { kind: 'DECIDED', content: '판매가', amount: 19000, revision: 0 }],
+    ['확정 이력', 'GET', '/projects/{project_id}/plan/ck_01/versions'],
+    ['내보내기', 'GET', '/projects/{project_id}/plan/export?format=md'],
+  ]],
+  ['경제성·산출물·기록', [
+    ['비용 조회', 'GET', '/projects/{project_id}/economics/costs'],
+    ['비용 저장', 'PUT', '/projects/{project_id}/economics/costs', { items: [{ label: '원단', amount: 3000 }, { label: '포장', amount: null }, { label: '수수료', unit: 'PERCENT', amount: 10 }], revision: 0 }],
+    ['가격 시나리오', 'POST', '/projects/{project_id}/economics/scenarios', { price: 19000, label: '기본' }],
+    ['시나리오 목록', 'GET', '/projects/{project_id}/economics/scenarios'],
+    ['문서 만들기', 'POST', '/projects/{project_id}/documents', { doc_type: 'PLAN', title: '상품 기획서', content: '내용' }],
+    ['문서 목록', 'GET', '/projects/{project_id}/documents'],
+    ['추가 기록', 'GET', '/projects/{project_id}/record'],
+    ['기록 추가', 'POST', '/projects/{project_id}/record/entries', { title: '포장', content: '친환경 포장', revision: 0 }],
+  ]],
+  ['채팅·AI 제안', [
+    ['채팅', 'GET', '/projects/{project_id}/chat'],
+    ['메시지 보내기', 'POST', '/projects/{project_id}/chat/messages', { content: '상품 아이디어 좀' }],
+    ['메시지 목록', 'GET', '/projects/{project_id}/chat/messages'],
+    ['제안 만들기', 'POST', '/projects/{project_id}/proposals', { target: 'ck_02', content: '30대 직장인' }],
+    ['제안 목록', 'GET', '/projects/{project_id}/proposals'],
+  ]],
   ['파일·작업·OpenAI', [
-    ['파일 목록', 'GET', '/assets?brand_id={brand_id}'],
+    ['브랜드 파일', 'GET', '/assets?brand_id={brand_id}'],
+    ['프로젝트 파일', 'GET', '/assets?project_id={project_id}'],
     ['파일 정보', 'GET', '/assets/{asset_id}'],
     ['파일 삭제', 'DELETE', '/assets/{asset_id}'],
     ['작업 목록', 'GET', '/jobs'],
@@ -43,10 +70,10 @@ const PRESETS = [
 const ID_FIELDS = ['brand_id', 'project_id', 'asset_id']
 
 function idFieldFor(path) {
-  if (path.startsWith('/brands')) return 'brand_id'
-  if (path.startsWith('/projects')) return 'project_id'
-  if (path.startsWith('/assets')) return 'asset_id'
-  return null
+  // /projects/{id}/plan 같은 하위 자료의 id는 기억하지 않는다.
+  const [, resource, , child] = path.split('?')[0].split('/')
+  if (child) return null
+  return { brands: 'brand_id', projects: 'project_id', assets: 'asset_id' }[resource] || null
 }
 
 export default function App() {
@@ -118,7 +145,7 @@ export default function App() {
     }
     const form = new FormData()
     form.append('file', upload.file)
-    form.append('brand_id', ids.brand_id)
+    if (ids.brand_id) form.append('brand_id', ids.brand_id)
     form.append('asset_type', upload.asset_type)
     if (upload.with_project && ids.project_id) form.append('project_id', ids.project_id)
     try {
@@ -179,7 +206,7 @@ export default function App() {
 
       <section>
         <h2>파일 업로드</h2>
-        <p className="hint">현재 brand_id로 올립니다. TXT, PNG, JPEG, WebP · 2MB까지.</p>
+        <p className="hint">현재 brand_id나 project_id로 올립니다. TXT, MD, DOCX, PNG, JPEG, WebP · 2MB까지.</p>
         <div className="row">
           <input type="file" onChange={(e) => setUpload({ ...upload, file: e.target.files[0] || null })} />
           <select value={upload.asset_type} onChange={(e) => setUpload({ ...upload, asset_type: e.target.value })}>

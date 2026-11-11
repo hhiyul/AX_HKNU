@@ -98,12 +98,13 @@ async def test_invalid_id_format_is_404(client, login):
 
 
 async def test_logo_must_belong_to_brand(client, login, db):
-    await login(client)
+    me = await login(client)
     brand = await create_brand(client)
     other = await create_brand(client)
     now = datetime.now(timezone.utc)
     asset = await db.assets.insert_one(
         {
+            "user_id": ObjectId(me["id"]),
             "brand_id": ObjectId(other["id"]),
             "asset_type": "logo",
             "source": "upload",
@@ -126,7 +127,7 @@ async def test_logo_must_belong_to_brand(client, login, db):
 async def test_delete_brand_blocked_by_project(client, login):
     await login(client)
     brand = await create_brand(client)
-    project = (await client.post("/projects", json={"brand_id": brand["id"]})).json()
+    project = (await client.post("/projects", json={"name": "상품", "brand_id": brand["id"]})).json()
     res = await client.delete(f"/brands/{brand['id']}")
     assert res.status_code == 409
     assert res.json()["code"] == "BRAND_IN_USE"
