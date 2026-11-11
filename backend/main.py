@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.db import close_db
 from app.errors import register_error_handlers
-from app.routers import assets, auth, brands, jobs, openai_test, profile, projects
+from app.routers import assets, auth, brands, jobs, openai_test, plan, profile, projects, workspace
 
 
 @asynccontextmanager
@@ -19,6 +19,9 @@ app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(brands.router)
 app.include_router(projects.router)
+app.include_router(plan.router)
+for workspace_router in workspace.routers:
+    app.include_router(workspace_router)
 app.include_router(assets.router)
 app.include_router(jobs.router)
 app.include_router(openai_test.router)

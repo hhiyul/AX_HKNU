@@ -19,6 +19,8 @@ CreatorName = Annotated[str, StringConstraints(strip_whitespace=True, min_length
 # 작성 중에는 비워둘 수 있는 글자 필드. 공백만 있으면 비운 것으로 본다.
 ShortText = Annotated[str | None, StringConstraints(max_length=200), AfterValidator(_blank_to_none)]
 LongText = Annotated[str | None, StringConstraints(max_length=5000), AfterValidator(_blank_to_none)]
+# 수정 요청에 실어 보내는 버전. 읽은 뒤 다른 곳에서 바뀌었으면 409 REVISION_CONFLICT.
+Revision = Annotated[int, Field(ge=0)]
 TextList = Annotated[list[Annotated[str, StringConstraints(max_length=100)]], Field(max_length=50)]
 
 

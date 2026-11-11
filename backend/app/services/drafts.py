@@ -16,11 +16,15 @@ def ensure_completable(document: dict, changes: dict) -> None:
 async def save_changes(collection: AsyncCollection, document: dict, changes: dict) -> dict:
     if not changes:
         return document
-    return await collection.find_one_and_update(
+    updated = await collection.find_one_and_update(
         {"_id": document["_id"]},
         {"$set": {**changes, "updated_at": datetime.now(timezone.utc)}},
         return_document=ReturnDocument.AFTER,
     )
+    if updated is None:
+        # 수정하는 사이에 다른 요청이 지운 경우
+        raise AppError(404, "NOT_FOUND", "자료를 찾을 수 없습니다.")
+    return updated
 
 
 async def remove_jobs(db: AsyncDatabase, query: dict, in_use: AppError) -> None:

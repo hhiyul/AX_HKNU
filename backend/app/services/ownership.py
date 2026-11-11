@@ -9,33 +9,28 @@ def not_found() -> AppError:
     return AppError(404, "NOT_FOUND", "자료를 찾을 수 없습니다.")
 
 
-def parse_object_id(value: str) -> ObjectId:
+def parse_object_id(value: str | ObjectId) -> ObjectId:
     try:
         return ObjectId(value)
     except (InvalidId, TypeError):
         raise not_found() from None
 
 
+async def get_owned(db: AsyncDatabase, collection: str, user_id: ObjectId, doc_id: str | ObjectId, **extra) -> dict:
+    """내 자료만 꺼낸다. 남의 자료와 잘못된 ID는 모두 404."""
+    document = await db[collection].find_one({"_id": parse_object_id(doc_id), "user_id": user_id, **extra})
+    if document is None:
+        raise not_found()
+    return document
+
+
 async def get_owned_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str | ObjectId) -> dict:
-    brand = await db.brands.find_one({"_id": parse_object_id(brand_id), "user_id": user_id})
-    if brand is None:
-        raise not_found()
-    return brand
+    return await get_owned(db, "brands", user_id, brand_id)
 
 
-async def get_owned_project(db: AsyncDatabase, user_id: ObjectId, project_id: str) -> dict:
-    # 상품에는 user_id가 없으므로 소속 브랜드로 판단한다.
-    project = await db.projects.find_one({"_id": parse_object_id(project_id)})
-    if project is None:
-        raise not_found()
-    await get_owned_brand(db, user_id, project["brand_id"])
-    return project
+async def get_owned_project(db: AsyncDatabase, user_id: ObjectId, project_id: str | ObjectId) -> dict:
+    return await get_owned(db, "projects", user_id, project_id)
 
 
-async def get_owned_asset(db: AsyncDatabase, user_id: ObjectId, asset_id: str) -> dict:
-    # 파일에도 user_id가 없으므로 소속 브랜드로 판단한다.
-    asset = await db.assets.find_one({"_id": parse_object_id(asset_id)})
-    if asset is None:
-        raise not_found()
-    await get_owned_brand(db, user_id, asset["brand_id"])
-    return asset
+async def get_owned_asset(db: AsyncDatabase, user_id: ObjectId, asset_id: str | ObjectId) -> dict:
+    return await get_owned(db, "assets", user_id, asset_id)
