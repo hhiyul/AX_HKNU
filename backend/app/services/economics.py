@@ -8,11 +8,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from bson import Int64, ObjectId
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.errors import AppError
-from app.services import plan
-from app.services.ownership import get_owned
+from app.services import items
 from app.services.projects import touch_project
-from app.services.revisions import upsert_revision, utcnow
+from app.services.store import get_owned, upsert_revision, utcnow
 
 
 def sheet_view(project_id: ObjectId, document: dict | None) -> dict:
@@ -107,13 +105,12 @@ async def adopt_scenario(
 ) -> dict:
     """고른 가격을 가격·원가 항목의 초안으로 넘긴다. 확정은 상품기획에서 따로 한다."""
     scenario = await get_owned(db, "scenarios", user_id, scenario_id, project_id=project_id)
-    if scenario["price"] > 2**63 - 1:
-        raise AppError(422, "VALIDATION_ERROR", "입력값을 확인해 주세요: price")
     content = f"판매가 {scenario['price']:,}원"
     if scenario["label"]:
         content += f" ({scenario['label']})"
-    item = await plan.save_item(
-        db, user_id, project_id, "ck_05", "DRAFT", content, scenario["price"], revision, "ECONOMICS", scenario["_id"]
+    item = await items.save_item(
+        db, user_id, project_id, "plan", "ck_05", "DRAFT", content, revision,
+        amount=scenario["price"], source="ECONOMICS", source_ref=scenario["_id"],
     )
     scenario["adopted_at"] = utcnow()
     await db.scenarios.update_one({"_id": scenario["_id"]}, {"$set": {"adopted_at": scenario["adopted_at"]}})

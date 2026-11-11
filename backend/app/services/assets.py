@@ -8,7 +8,7 @@ from fastapi import UploadFile
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
-from app.services.ownership import get_owned_asset, get_owned_brand, get_owned_project, not_found
+from app.services.store import get_owned_asset, get_owned_brand, get_owned_project, not_found
 from app.storage import delete_file, save_file
 
 MAX_FILE_SIZE = 2 * 1024 * 1024
@@ -119,6 +119,6 @@ async def list_assets(
 async def delete_asset(db: AsyncDatabase, user_id: ObjectId, asset_id: str) -> None:
     asset = await get_owned_asset(db, user_id, asset_id)
     await db.brands.update_many({"logo_asset_id": asset["_id"]}, {"$set": {"logo_asset_id": None}})
-    await db.chats.update_many({"file_refs": asset["_id"]}, {"$pull": {"file_refs": asset["_id"]}})
+    await db.projects.update_many({"file_refs": asset["_id"]}, {"$pull": {"file_refs": asset["_id"]}})
     await db.assets.delete_one({"_id": asset["_id"]})
     await delete_file(asset["_id"])

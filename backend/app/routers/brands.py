@@ -6,7 +6,7 @@ from app.deps import Page, current_user
 from app.schemas.brands import BrandCreate, BrandOut, BrandUpdate
 from app.schemas.common import to_api
 from app.services import brands as service
-from app.services.ownership import get_owned_brand
+from app.services.store import get_owned_brand
 
 router = APIRouter(prefix="/brands", tags=["brands"])
 

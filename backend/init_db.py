@@ -24,9 +24,6 @@ def enum(*values):
     return {"bsonType": "string", "enum": list(values)}
 
 
-ITEM_KEY = enum("ck_01", "ck_02", "ck_03", "ck_04", "ck_05", "ck_06")
-
-
 def build_schema(required, optional):
     properties = {}
     for name, rule in required.items():
@@ -75,6 +72,11 @@ COLLECTIONS = {
             # 브랜드 없이도 프로젝트를 만들 수 있다.
             "brand_id": ["objectId"],
             "description": ["string"],
+            # AI 채팅 설정과 메시지 수. 채팅은 프로젝트당 하나라 따로 컬렉션을 두지 않는다.
+            "search_enabled": ["bool"],
+            "file_refs": ["array"],
+            "chip_refs": ["array"],
+            "message_count": ["int"],
         },
     ),
     "assets": build_schema(
@@ -94,20 +96,30 @@ COLLECTIONS = {
             "ai_job_id": ["objectId"],
         },
     ),
-    # 상품기획 6개 항목. 프로젝트마다 항목당 문서 하나.
-    "plan_items": build_schema(
-        required={**OWNED, "item_key": ITEM_KEY, "version": "int", "revision": "int", **TIMESTAMPS},
-        optional={"draft": ["object"], "decided": ["object"]},
+    # 프로젝트에 저장하는 글. kind로 구분한다: plan(기획 6개 항목), record(추가 기록), document(산출물).
+    # 종류마다 내용이 조금씩 달라 공통 필드만 검사한다. 나머지 규칙은 services/items.py에 있다.
+    "items": build_schema(
+        required={
+            **OWNED,
+            "kind": enum("plan", "record", "document"),
+            "key": "string",
+            "version": "int",
+            "revision": "int",
+            **TIMESTAMPS,
+        },
+        optional={"title": ["string"], "draft": ["object"], "decided": ["object"]},
     ),
     # 확정할 때마다 쌓이는 이력
-    "plan_versions": build_schema(
-        required={**OWNED, "item_key": ITEM_KEY, "version": "int", "content": "string", "decided_at": "date"},
-        optional={"amount": ["int", "long"], "source_ref": ["objectId"]},
-    ),
-    # 추가 기록. 프로젝트당 문서 하나.
-    "records": build_schema(
-        required={**OWNED, "entries": "array", "revision": "int", **TIMESTAMPS},
-        optional={},
+    "item_versions": build_schema(
+        required={
+            **OWNED,
+            "kind": enum("plan", "record", "document"),
+            "key": "string",
+            "version": "int",
+            "content": "string",
+            "decided_at": "date",
+        },
+        optional={"title": ["string"], "amount": ["int", "long"], "source_ref": ["objectId"]},
     ),
     # 경제성 비용 입력. 프로젝트당 문서 하나.
     "cost_sheets": build_schema(
@@ -130,32 +142,6 @@ COLLECTIONS = {
         },
         optional={"margin_rate": ["double", "int", "long"], "adopted_at": ["date"]},
     ),
-    "documents": build_schema(
-        required={
-            **OWNED,
-            "doc_type": enum("PLAN", "INTRO", "DETAIL_PAGE", "MARKETING", "PREP"),
-            "title": "string",
-            "content": "string",
-            "state": enum("DRAFT", "FINAL"),
-            "basis": STRING_LIST,
-            "plan_snapshot": "object",
-            "version": "int",
-            "revision": "int",
-            **TIMESTAMPS,
-        },
-        optional={},
-    ),
-    "document_versions": build_schema(
-        required={
-            **OWNED,
-            "document_id": "objectId",
-            "version": "int",
-            "title": "string",
-            "content": "string",
-            "finalized_at": "date",
-        },
-        optional={},
-    ),
     "proposals": build_schema(
         required={
             **OWNED,
@@ -167,23 +153,9 @@ COLLECTIONS = {
         },
         optional={"message_id": ["objectId"], "applied_content": ["string"], "decided_at": ["date"]},
     ),
-    # AI 채팅. 프로젝트당 하나.
-    "chats": build_schema(
-        required={
-            **OWNED,
-            "search_enabled": "bool",
-            "file_refs": "array",
-            "chip_refs": "array",
-            "message_count": "int",
-            "revision": "int",
-            **TIMESTAMPS,
-        },
-        optional={},
-    ),
     "messages": build_schema(
         required={
             **OWNED,
-            "chat_id": "objectId",
             "ordinal": "int",
             "role": enum("USER", "ASSISTANT"),
             "content": "string",
@@ -230,6 +202,7 @@ INDEXES = {
     "projects": [
         ([("user_id", ASCENDING), ("updated_at", DESCENDING)], {}),
         ([("brand_id", ASCENDING), ("created_at", DESCENDING)], {}),
+        ([("chip_refs", ASCENDING)], {}),
     ],
     "assets": [
         ([("user_id", ASCENDING), ("created_at", DESCENDING)], {}),
@@ -241,15 +214,16 @@ INDEXES = {
         ([("user_id", ASCENDING), ("created_at", DESCENDING)], {}),
         ([("brand_id", ASCENDING), ("created_at", DESCENDING)], {}),
     ],
-    "plan_items": [([("project_id", ASCENDING), ("item_key", ASCENDING)], UNIQUE)],
-    "plan_versions": [([("project_id", ASCENDING), ("item_key", ASCENDING), ("version", DESCENDING)], {})],
-    "records": [([("project_id", ASCENDING)], UNIQUE)],
+    "items": [
+        ([("project_id", ASCENDING), ("kind", ASCENDING), ("key", ASCENDING)], UNIQUE),
+        ([("project_id", ASCENDING), ("kind", ASCENDING), ("updated_at", DESCENDING)], {}),
+    ],
+    "item_versions": [
+        ([("project_id", ASCENDING), ("kind", ASCENDING), ("key", ASCENDING), ("version", DESCENDING)], {})
+    ],
     "cost_sheets": [([("project_id", ASCENDING)], UNIQUE)],
     "scenarios": [([("project_id", ASCENDING), ("created_at", DESCENDING)], {})],
-    "documents": [([("project_id", ASCENDING), ("updated_at", DESCENDING)], {})],
-    "document_versions": [([("document_id", ASCENDING), ("version", DESCENDING)], {})],
     "proposals": [([("project_id", ASCENDING), ("state", ASCENDING), ("created_at", DESCENDING)], {})],
-    "chats": [([("project_id", ASCENDING)], UNIQUE), ([("chip_refs", ASCENDING)], {})],
     "messages": [([("project_id", ASCENDING), ("ordinal", ASCENDING)], {})],
     "requests": [
         ([("user_id", ASCENDING), ("key", ASCENDING)], UNIQUE),

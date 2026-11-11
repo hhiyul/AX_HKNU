@@ -1,12 +1,32 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
+from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
 from app.schemas.brands import BrandCreate, BrandUpdate
-from app.services.drafts import ensure_completable, remove_jobs, save_changes
-from app.services.ownership import get_owned_brand, not_found, parse_object_id
+from app.services.store import get_owned_brand, not_found, parse_object_id, remove_jobs
+
+
+def ensure_completable(brand: dict, changes: dict) -> None:
+    merged = {**brand, **changes}
+    if merged.get("status") == "completed" and not merged.get("name"):
+        raise AppError(422, "NAME_REQUIRED", "완료하려면 이름을 입력해 주세요.")
+
+
+async def save_changes(db: AsyncDatabase, brand: dict, changes: dict) -> dict:
+    if not changes:
+        return brand
+    updated = await db.brands.find_one_and_update(
+        {"_id": brand["_id"]},
+        {"$set": {**changes, "updated_at": datetime.now(timezone.utc)}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if updated is None:
+        # 수정하는 사이에 다른 요청이 지운 경우
+        raise not_found()
+    return updated
 
 
 async def create_brand(db: AsyncDatabase, user_id: ObjectId, body: BrandCreate) -> dict:
@@ -40,7 +60,7 @@ async def update_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str, body
         if not logo["mime_type"].startswith("image/"):
             raise AppError(422, "LOGO_NOT_IMAGE", "로고는 이미지 파일만 지정할 수 있습니다.")
         changes["logo_asset_id"] = logo_id
-    return await save_changes(db.brands, brand, changes)
+    return await save_changes(db, brand, changes)
 
 
 async def delete_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str) -> None:

@@ -86,7 +86,7 @@ async def test_other_users_project_is_404(client, login):
     assert (await client.get(url)).status_code == 404
     assert (await client.patch(url, json={"name": "x", "revision": 1})).status_code == 404
     assert (await client.delete(url)).status_code == 404
-    for path in ("plan", "record", "economics/costs", "documents", "chat", "proposals", "overview", "projection"):
+    for path in ("items/plan", "items/record", "economics/costs", "messages", "proposals", "overview", "projection"):
         assert (await client.get(f"{url}/{path}")).status_code == 404, path
 
 
@@ -100,25 +100,22 @@ async def test_delete_project_removes_everything_under_it(client, login, db):
     project = await create_project(client)
     other = await create_project(client, "다른 프로젝트")
     url = f"/projects/{project['id']}"
-    await client.put(f"{url}/plan/ck_01", json={"kind": "DECIDED", "content": "핫팩", "revision": 0})
-    await client.post(f"{url}/record/entries", json={"title": "메모", "content": "내용", "revision": 0})
+    await client.put(f"{url}/items/plan/ck_01", json={"state": "DECIDED", "content": "핫팩", "revision": 0})
+    await client.post(f"{url}/items/record", json={"title": "메모", "content": "내용"})
+    await client.post(
+        f"{url}/items/document", json={"title": "기획서", "doc_type": "PLAN", "state": "DECIDED"}
+    )
     await client.put(f"{url}/economics/costs", json={"items": [{"label": "원단", "amount": 3000}], "revision": 0})
     await client.post(f"{url}/economics/scenarios", json={"price": 10000})
-    doc = (await client.post(f"{url}/documents", json={"doc_type": "PLAN", "title": "기획서"})).json()
-    await client.post(f"{url}/documents/{doc['id']}/finalize", json={"revision": 1})
-    await client.post(f"{url}/chat/messages", json={"content": "안녕"})
+    await client.post(f"{url}/messages", json={"content": "안녕"})
     await client.post(f"{url}/proposals", json={"target": "ck_02", "content": "20대 직장인"})
     # 다른 프로젝트가 이 프로젝트를 참고 자료로 걸어 둔 경우
-    other_chat = f"/projects/{other['id']}/chat"
-    await client.get(other_chat)
-    res = await client.patch(other_chat, json={"chip_refs": [project["id"]], "revision": 1})
+    other_url = f"/projects/{other['id']}"
+    res = await client.patch(other_url, json={"chip_refs": [project["id"]], "revision": 1})
     assert res.status_code == 200, res.text
 
     assert (await client.delete(url)).status_code == 204
-    for name in (
-        "plan_items", "plan_versions", "records", "cost_sheets", "scenarios",
-        "documents", "document_versions", "proposals", "messages",
-    ):
+    for name in ("items", "item_versions", "cost_sheets", "scenarios", "proposals", "messages"):
         assert await db[name].count_documents({}) == 0, name
-    assert (await client.get(other_chat)).json()["chip_refs"] == []
+    assert (await client.get(other_url)).json()["chip_refs"] == []
     assert (await client.get(url)).status_code == 404

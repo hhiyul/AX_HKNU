@@ -28,32 +28,32 @@ const PRESETS = [
     ['조회', 'GET', '/projects/{project_id}'],
     ['수정', 'PATCH', '/projects/{project_id}', { description: '설명', current_step: 'plan', revision: 1 }],
     ['브랜드 연결', 'PATCH', '/projects/{project_id}', { brand_id: '{brand_id}', revision: 1 }],
+    ['채팅 설정', 'PATCH', '/projects/{project_id}', { search_enabled: true, revision: 1 }],
     ['개요', 'GET', '/projects/{project_id}/overview'],
     ['AI 맥락', 'GET', '/projects/{project_id}/projection'],
     ['삭제', 'DELETE', '/projects/{project_id}'],
   ]],
-  ['상품기획', [
-    ['6개 항목', 'GET', '/projects/{project_id}/plan'],
-    ['초안 저장', 'PUT', '/projects/{project_id}/plan/ck_01', { kind: 'DRAFT', content: '핫팩 파우치', revision: 0 }],
-    ['확정', 'PUT', '/projects/{project_id}/plan/ck_01', { kind: 'DECIDED', content: '핫팩 파우치', revision: 1 }],
-    ['가격 확정', 'PUT', '/projects/{project_id}/plan/ck_05', { kind: 'DECIDED', content: '판매가', amount: 19000, revision: 0 }],
-    ['확정 이력', 'GET', '/projects/{project_id}/plan/ck_01/versions'],
-    ['내보내기', 'GET', '/projects/{project_id}/plan/export?format=md'],
+  ['글 (기획·기록·문서)', [
+    ['기획 6개 항목', 'GET', '/projects/{project_id}/items/plan'],
+    ['기획 초안 저장', 'PUT', '/projects/{project_id}/items/plan/ck_01', { state: 'DRAFT', content: '핫팩 파우치', revision: 0 }],
+    ['기획 확정', 'PUT', '/projects/{project_id}/items/plan/ck_01', { state: 'DECIDED', content: '핫팩 파우치', revision: 1 }],
+    ['가격 확정', 'PUT', '/projects/{project_id}/items/plan/ck_05', { state: 'DECIDED', content: '판매가', amount: 19000, revision: 0 }],
+    ['확정 이력', 'GET', '/projects/{project_id}/items/plan/ck_01/versions'],
+    ['기획 내보내기', 'GET', '/projects/{project_id}/items/export?format=md'],
+    ['기록 추가', 'POST', '/projects/{project_id}/items/record', { title: '포장', content: '친환경 포장' }],
+    ['기록 목록', 'GET', '/projects/{project_id}/items/record'],
+    ['문서 만들기', 'POST', '/projects/{project_id}/items/document', { title: '상품 기획서', doc_type: 'PLAN', content: '내용' }],
+    ['문서 목록', 'GET', '/projects/{project_id}/items/document'],
   ]],
-  ['경제성·산출물·기록', [
+  ['경제성', [
     ['비용 조회', 'GET', '/projects/{project_id}/economics/costs'],
     ['비용 저장', 'PUT', '/projects/{project_id}/economics/costs', { items: [{ label: '원단', amount: 3000 }, { label: '포장', amount: null }, { label: '수수료', unit: 'PERCENT', amount: 10 }], revision: 0 }],
     ['가격 시나리오', 'POST', '/projects/{project_id}/economics/scenarios', { price: 19000, label: '기본' }],
     ['시나리오 목록', 'GET', '/projects/{project_id}/economics/scenarios'],
-    ['문서 만들기', 'POST', '/projects/{project_id}/documents', { doc_type: 'PLAN', title: '상품 기획서', content: '내용' }],
-    ['문서 목록', 'GET', '/projects/{project_id}/documents'],
-    ['추가 기록', 'GET', '/projects/{project_id}/record'],
-    ['기록 추가', 'POST', '/projects/{project_id}/record/entries', { title: '포장', content: '친환경 포장', revision: 0 }],
   ]],
   ['채팅·AI 제안', [
-    ['채팅', 'GET', '/projects/{project_id}/chat'],
-    ['메시지 보내기', 'POST', '/projects/{project_id}/chat/messages', { content: '상품 아이디어 좀' }],
-    ['메시지 목록', 'GET', '/projects/{project_id}/chat/messages'],
+    ['메시지 보내기', 'POST', '/projects/{project_id}/messages', { content: '상품 아이디어 좀' }],
+    ['메시지 목록', 'GET', '/projects/{project_id}/messages'],
     ['제안 만들기', 'POST', '/projects/{project_id}/proposals', { target: 'ck_02', content: '30대 직장인' }],
     ['제안 목록', 'GET', '/projects/{project_id}/proposals'],
   ]],
@@ -70,7 +70,7 @@ const PRESETS = [
 const ID_FIELDS = ['brand_id', 'project_id', 'asset_id']
 
 function idFieldFor(path) {
-  // /projects/{id}/plan 같은 하위 자료의 id는 기억하지 않는다.
+  // /projects/{id}/items 같은 하위 자료의 id는 기억하지 않는다.
   const [, resource, , child] = path.split('?')[0].split('/')
   if (child) return null
   return { brands: 'brand_id', projects: 'project_id', assets: 'asset_id' }[resource] || null

@@ -6,7 +6,7 @@ from app.deps import Once, Page, current_user
 from app.schemas.common import to_api
 from app.schemas.projects import ProjectCreate, ProjectOut, ProjectUpdate
 from app.services import projects as service
-from app.services.ownership import get_owned_project
+from app.services.store import get_owned_project
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
