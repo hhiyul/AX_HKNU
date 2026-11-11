@@ -4,9 +4,8 @@ from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
-from app.services import plan, records
-from app.services.ownership import get_owned, not_found, parse_object_id
-from app.services.revisions import utcnow
+from app.services import items
+from app.services.store import get_owned, not_found, parse_object_id, utcnow
 
 OPEN_STATES = ["PENDING", "HELD"]
 
@@ -16,9 +15,9 @@ def closed() -> AppError:
 
 
 async def _revisions(db: AsyncDatabase, project_id: ObjectId) -> dict[str, int]:
-    """제안 대상별 현재 revision."""
-    current = {item["item_key"]: item["revision"] for item in await plan.list_items(db, project_id)}
-    current["record"] = (await records.get_record(db, project_id))["revision"]
+    """제안 대상별 현재 revision. 추가 기록은 늘 새로 만들어지므로 0이다."""
+    current = {item["key"]: item["revision"] for item in await items.list_items(db, project_id, "plan")}
+    current["record"] = 0
     return current
 
 
@@ -95,21 +94,20 @@ async def set_state(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId, 
 
 
 async def apply_proposal(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId, proposal_id: str, body) -> dict:
-    """사용자가 고른 내용을 대상에 저장한다. 대상이 그 사이 바뀌었으면 409로 돌려보낸다."""
+    """사용자가 고른 내용을 대상에 저장한다. 기획 항목이 그 사이 바뀌었으면 409로 돌려보낸다."""
     proposal = await get_owned(db, "proposals", user_id, proposal_id, project_id=project_id)
     if proposal["state"] not in OPEN_STATES:
         raise closed()
+    origin = {"source": "AI", "source_ref": proposal["_id"]}
     if proposal["target"] == "record":
         if body.title is None:
             raise AppError(422, "TITLE_REQUIRED", "추가 기록으로 반영하려면 제목을 입력해 주세요.")
         if body.amount is not None:
             raise AppError(422, "AMOUNT_NOT_ALLOWED", "금액은 가격·원가 항목에만 넣을 수 있습니다.")
-        await records.add_entry(
-            db, user_id, project_id, body.title, body.content, body.kind, body.revision, "AI", proposal["_id"]
-        )
+        await items.create_item(db, user_id, project_id, "record", body, **origin)
     else:
-        await plan.save_item(
-            db, user_id, project_id, proposal["target"], body.kind, body.content, body.amount, body.revision,
-            "AI", proposal["_id"],
+        await items.save_item(
+            db, user_id, project_id, "plan", proposal["target"], body.state, body.content, body.revision,
+            amount=body.amount, **origin,
         )
     return await _close(db, proposal, {"state": "APPLIED", "applied_content": body.content, "decided_at": utcnow()})

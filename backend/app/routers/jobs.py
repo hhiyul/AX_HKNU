@@ -8,7 +8,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from app.db import get_db
 from app.deps import Page, current_user
 from app.schemas.common import to_api
-from app.services.ownership import not_found, parse_object_id
+from app.services.store import not_found, parse_object_id
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 

@@ -8,12 +8,12 @@ from app.errors import AppError
 from app.schemas.assets import AssetOut, AssetType
 from app.schemas.common import to_api
 from app.services import assets as service
-from app.services.ownership import get_owned_asset
+from app.services.store import get_owned_asset
 from app.storage import file_path
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
-# 여기는 올린 파일만 다룬다. 기획 산출물(문서)은 /projects/{id}/documents 에 있다.
+# 여기는 올린 파일만 다룬다. 기획 산출물(문서)은 /projects/{id}/items/document 에 있다.
 
 
 @router.get("", response_model=list[AssetOut])

@@ -7,8 +7,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from app.db import get_db
 from app.errors import AppError
 from app.services.auth import COOKIE_NAME, decode_token
-from app.services.idempotency import run_once
-from app.services.ownership import get_owned_project
+from app.services.store import get_owned_project, run_once
 
 
 class Page:
@@ -57,11 +56,12 @@ class Once:
 
     def __init__(
         self,
-        key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=100),
+        # 경로의 {key}와 겹치지 않게 이름을 길게 둔다.
+        idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=100),
         user: dict = Depends(current_user),
         db: AsyncDatabase = Depends(get_db),
     ):
-        self.key = key
+        self.key = idempotency_key
         self.user_id = user["_id"]
         self.db = db
 
