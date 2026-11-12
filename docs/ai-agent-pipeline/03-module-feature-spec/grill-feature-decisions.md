@@ -563,4 +563,6 @@ GD-034까지 반영한 뒤 사용자 정본의 OPEN-UF-01~16·P-01/C-01~03과 �
 | Q19 | 명시 확정 | 04 TXT/MD/DOCX/PDF | 03 CK 내보내기와 분리 |
 | Q20 | 04 도구 소유 | 04 생성·수정·삭제 작업 소유 | 무승인 자율 삭제 미승인 |
 
-PRODUCT_OPEN: 확인/위임·선택 UX, 미저장 출력·복구. EXACT_OPEN: 버전 해상도·스냅샷·편집/포트/출력 구현. UPSTREAM_BLOCKED: C-01~03의 권한·버전·저장/삭제 결과 및 제공 계약. Figma 원본은 이번 편집 세션에서 접근 불가하여 UX 충돌은 미검증·디자인팀 확인 대상으로 남깁니다.
+**행별 정본 추적:** Q1·Q6은 [03 사용자 정본 연결부](../02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md)와 [04 모듈 처리](planning-output-module-spec.md#처리상태예외), Q5·Q16은 같은 03 연결부와 [04 생성](../02-user-feature-spec/planning-output-user-spec.md#2-생성과-검토), Q2·Q3·Q7~9·Q12·Q17은 04 생성과 [owner 계약](planning-output-module-spec.md#교차-owner-계약과-실패-시-처리)에 대응합니다. Q4·Q10·Q13~15·Q18은 [04 편집·재생성](../02-user-feature-spec/planning-output-user-spec.md#3-편집변경-감지재생성), Q11·Q19·Q20은 [04 자원](../02-user-feature-spec/planning-output-user-spec.md#1-목적과-자원) 및 [삭제·출력](../02-user-feature-spec/planning-output-user-spec.md#4-삭제내보내기수명)에 대응합니다. 각 행의 구체 반례는 [AC-01~22](../02-user-feature-spec/planning-output-user-spec.md#52-인수-반례-추적-명세-검토-실행-시험-아님)이며 실행 결과가 아닙니다. Q1·Q6에는 D-UF-040~046·106, Q5·Q16에는 GD-028·033, Q19에는 GD-009·011과 UF-AI-15·16을 함께 적용합니다. 나머지 기존 GD도 보존합니다.
+
+PRODUCT_OPEN: 확인/위임·선택 UX, 미저장 출력·복구. EXACT_OPEN: 버전 해상도·스냅샷·편집/포트/출력 구현. UPSTREAM_BLOCKED: C-01~03의 권한·버전·저장/삭제 결과 및 제공 계약. 2026-11-12 Figma IA 원본과 웹 프로토타입을 추가 확인했습니다. IA는 기획 기준본과 산출물을 구분하지만 프로토타입의 AI 검수 결과는 별도 영역에 저장됩니다. 관찰·차이 및 미검증 범위는 [04 사용자 정본 6절](../02-user-feature-spec/planning-output-user-spec.md#6-2026-11-12-ux-관찰과-정합-사항)을 따르며 디자인팀 정합은 후속입니다.
