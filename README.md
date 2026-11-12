@@ -78,21 +78,21 @@ docker compose -f docker-compose.test.yml run --rm test-runner sh -c "pip instal
 ```
 users (사용자)
  ├─ brands (브랜드)
- ├─ projects (프로젝트)              brand_id는 선택. AI 채팅 설정과 메시지 수도 여기 있다
- │   ├─ items / item_versions        프로젝트에 저장하는 글과 확정 이력. kind로 구분한다
- │   │                                 plan 상품기획 6개 항목 · record 추가 기록 · document 기획 산출물
- │   ├─ cost_sheets / scenarios      경제성: 비용표(프로젝트당 하나), 가격 시나리오
- │   ├─ messages                     AI 채팅 메시지
- │   └─ proposals                    AI 제안
+ ├─ projects (프로젝트)              brand_id는 선택. 진행 단계, 보관·휴지통, 메모, 최근 작업, AI 채팅 설정도 여기 있다
+ │   ├─ items                        프로젝트에 저장하는 글. kind로 구분한다
+ │   │                                 plan 상품기획 6개 항목 · record AI와 함께 정리한 내용 · document 산출물
+ │   ├─ cost_sheets                  경제성 입력값(프로젝트당 하나). 비교 결과는 조회할 때 계산한다
+ │   └─ messages                     AI 채팅 메시지
  ├─ assets (파일)                    brand_id, project_id 중 하나 이상
  ├─ ai_jobs (AI 작업)
  └─ requests                         중복 요청 방지 기록 (7일 뒤 자동 삭제)
 ```
 
 - **모든 문서에 `user_id`가 있고**, "내 것인지"는 그 값으로 판단합니다(`services/store.py`).
-- 상품기획 항목, 추가 기록, 기획 산출물은 모두 "글 + 초안/확정 + 이력"이라 **`items` 한 컬렉션**에 `kind`로 구분해 저장합니다. 새 종류가 생기면 컬렉션이나 API를 늘리지 않고 `kind`만 추가합니다.
+- 상품기획 항목, AI와 함께 정리한 내용, 산출물은 모두 "제목 + 내용"이라 **`items` 한 컬렉션**에 `kind`로 구분해 저장합니다. 새 종류가 생기면 컬렉션이나 API를 늘리지 않고 `kind`만 추가합니다.
+- 화면 구성과 동작은 프로토타입(https://duing.shop/AX/)을 기준으로 맞췄습니다.
 - 컬렉션의 필드 타입, 필수 여부, 인덱스는 `backend/init_db.py`가 원본입니다. 필드를 추가하면 이 파일도 같이 고쳐야 합니다.
-- 설계에서 내린 결정과 그 이유는 `docs/superpowers/specs/2026-11-11-backend-v03-design.md`에 있습니다.
+- `docs/superpowers/specs/2026-11-11-backend-v03-design.md`는 프로토타입에 맞추기 전(v0.3) 설계 기록입니다. 초안/확정, 이력, AI 제안, 가격 시나리오는 지금 코드에 없습니다.
 
 ## API
 
@@ -102,8 +102,8 @@ users (사용자)
 |---|---|---|
 | 인증 | `POST /auth/signup`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` | 가입과 로그인은 쿠키를 심어 줍니다 |
 | 프로필 | `PATCH /profile` | 창작자 이름 변경 |
-| 브랜드 | `GET·POST /brands`, `GET·PATCH·DELETE /brands/{id}` | |
-| 프로젝트 | `GET·POST /projects`, `GET·PATCH·DELETE /projects/{id}` | 이름만 있으면 만들 수 있습니다. 목록은 `?brand_id=`로 거를 수 있습니다. AI 채팅 설정(`search_enabled`, `file_refs`, `chip_refs`)도 `PATCH`로 바꿉니다 |
+| 브랜드 | `GET·POST /brands`, `GET·PATCH·DELETE /brands/{id}` | 이름과 소개만으로 만들 수 있습니다 |
+| 프로젝트 | `GET·POST /projects`, `GET·PATCH·DELETE /projects/{id}` | 이름만 있으면 만들 수 있습니다. 목록은 `?brand_id=`(`none`이면 브랜드 없는 프로젝트), `?status=active\|archived\|trash`, `?q=`(이름 검색)로 거릅니다. 진행 단계·메모·보관·복원·AI 채팅 설정은 `PATCH`로 바꿉니다 |
 | 파일 | `GET·POST /assets`, `GET·DELETE /assets/{id}`, `GET /assets/{id}/file` | 목록은 `?brand_id=`나 `?project_id=` 필수. 업로드는 multipart |
 | AI 작업 | `GET /jobs`, `GET /jobs/{id}` | 조회만. 생성과 상태 변경은 파이프라인 담당 |
 | OpenAI | `POST /openai/test` | 키가 유효한지만 확인. 키는 저장하지 않습니다 |
@@ -113,13 +113,11 @@ users (사용자)
 
 | 영역 | 경로 | 비고 |
 |---|---|---|
-| 개요 | `GET /overview` | 항목 상태, 대기 중인 제안, 최신화가 필요한 문서 등 요약 |
+| 개요 | `GET /overview` | 작업실 홈에 필요한 것: 프로젝트(메모·최근 작업 포함), 기획 6개 항목 상태, 글·대화·파일 수, 확정 가격 |
 | AI 맥락 | `GET /projection?sections=` | 파이프라인에 넘길 프로젝트 내용과 `bundle_revision` |
-| 글 | `GET·POST /items/{kind}`, `GET·PUT·DELETE /items/{kind}/{key}`, `DELETE /items/{kind}/{key}/draft`, `GET /items/{kind}/{key}/versions` | `kind`는 `plan`, `record`, `document`. `PUT`의 `state`가 `DRAFT`면 초안 저장, `DECIDED`면 확정 |
-| 글 (부가) | `POST /items/batch`, `GET /items/export?format=md\|txt`, `POST /items/{kind}/similar`, `POST /items/document/{key}/sync` | 기획 항목 일괄 저장·내보내기, 비슷한 글 찾기, 문서 최신화 확인 |
-| 경제성 | `GET·PUT /economics/costs`, `GET·POST /economics/scenarios`, `DELETE /economics/scenarios/{sid}`, `POST /economics/scenarios/{sid}/adopt` | 채택하면 `plan/ck_05`의 초안으로 넘어갑니다 |
+| 글 | `GET·POST /items/{kind}`, `GET·PUT·DELETE /items/{kind}/{key}`, `DELETE /items/document/{key}/draft` | `kind`는 `plan`, `record`, `document`. AI 답변 저장은 `POST`에 `message_id`를 넣습니다 |
+| 경제성 | `GET·PUT /economics`, `POST /economics/baseline`, `POST /economics/confirm` | 입력 저장, 비교 기준 저장, 판매가 결정(`plan/ck_05`에 반영) |
 | AI 채팅 | `GET·POST /messages` | 사용자 메시지 저장만. 답변 생성은 파이프라인 |
-| AI 제안 | `GET·POST /proposals`, `GET /proposals/{pid}`, `POST /proposals/{pid}/hold`, `/reject`, `/apply` | 반영(`apply`)해야 기획에 들어갑니다 |
 
 요청과 응답의 정확한 필드는 Swagger(`http://localhost:8000/docs`)에서 확인하세요.
 
@@ -138,47 +136,53 @@ users (사용자)
 |---|---|---|
 | 401 | `UNAUTHORIZED`, `INVALID_CREDENTIALS` | 로그인 필요, 이메일·비밀번호 불일치 |
 | 404 | `NOT_FOUND`, `FILE_MISSING` | 없는 자료. **남의 자료와 잘못된 ID 형식도 404**입니다 |
-| 409 | `EMAIL_TAKEN`, `BRAND_IN_USE`, `PROJECT_IN_USE` | 중복 가입, 지울 수 없는 상태 |
-| 409 | `REVISION_CONFLICT`, `REQUEST_IN_PROGRESS`, `PROPOSAL_CLOSED` | 다른 곳에서 먼저 수정됨, 같은 요청 처리 중, 이미 닫힌 제안 |
+| 409 | `EMAIL_TAKEN`, `BRAND_IN_USE`, `PROJECT_IN_USE`, `NOT_IN_TRASH` | 중복 가입, 지울 수 없는 상태 |
+| 409 | `PROJECT_NOT_ACTIVE` | 보관함·휴지통에 있는 프로젝트의 작업실을 열려고 함 |
+| 409 | `REVISION_CONFLICT`, `REQUEST_IN_PROGRESS` | 다른 곳에서 먼저 수정됨, 같은 요청 처리 중 |
 | 413 | `FILE_TOO_LARGE` | 2MB 초과 |
-| 422 | `VALIDATION_ERROR`, `NAME_REQUIRED`, `INVALID_ASSET`, `LOGO_NOT_IMAGE`, `ASSET_OWNER_REQUIRED`, `AMOUNT_NOT_ALLOWED`, `NO_DRAFT`, `NO_DECIDED`, `TITLE_REQUIRED`, `ITEM_LIMIT` | 입력값 문제 |
+| 422 | `VALIDATION_ERROR`, `NAME_REQUIRED`, `INVALID_ASSET`, `LOGO_NOT_IMAGE`, `ASSET_OWNER_REQUIRED`, `AMOUNT_NOT_ALLOWED`, `NO_DRAFT`, `ITEM_LIMIT`, `COSTS_INCOMPLETE` | 입력값 문제 |
 | 503 | `AUTH_NOT_CONFIGURED`, `DB_NOT_CONFIGURED`, `DB_UNAVAILABLE` | `.env` 누락 또는 Atlas 연결 실패 |
 
 **버전(revision)과 동시 수정**
-- 고칠 수 있는 자료(프로젝트, 글, 비용표)는 응답에 정수 `revision`이 있습니다.
+- 고칠 수 있는 자료(프로젝트, 글, 경제성 입력)는 응답에 정수 `revision`이 있습니다.
 - 수정 요청에는 **읽었을 때의 `revision`을 그대로** 실어 보냅니다. 그 사이 다른 탭이나 기기에서 바뀌었으면 409 `REVISION_CONFLICT`이고 아무것도 저장되지 않습니다. 화면은 최신 내용을 다시 읽어 사용자에게 보여 주면 됩니다.
-- 기획 항목과 비용표는 아직 저장한 적이 없으면 `revision: 0`으로 조회되고, 처음 저장할 때 0을 보냅니다.
+- 기획 항목과 경제성 입력은 아직 저장한 적이 없으면 `revision: 0`으로 조회되고, 처음 저장할 때 0을 보냅니다.
 
 **중복 요청 방지**
 - 저장 요청에 `Idempotency-Key` 헤더(요청마다 새로 만든 값)를 붙이면 같은 키의 요청은 한 번만 처리됩니다. 같은 키로 다시 보내면 처음 결과를 그대로 돌려줍니다.
 - 응답을 못 받았으면 다시 보내기 전에 `GET /requests/{key}`로 확인합니다. `APPLIED`(반영됨), `NOT_APPLIED`(거부됨), `PROCESSING`(아직 모름).
 
 **브랜드 초안 저장**
-- 생성하면 항상 `status: "draft"`로 시작하고 `brand_type`만 필수입니다.
+- 생성하면 항상 `status: "draft"`로 시작합니다. 필수 필드는 없고, `brand_type`을 보내지 않으면 `existing`입니다.
 - `PATCH`는 **보낸 필드만** 바꿉니다. 글자 필드에 빈 문자열을 보내면 `null`로 저장됩니다.
 - `status: "completed"`로 바꾸려면 `name`이 있어야 합니다.
 - 정의하지 않은 필드를 보내면 422입니다. `keywords`, `colors`는 항목당 100자, 50개까지입니다.
 
+**프로젝트**
+- `stage`(진행 단계)는 `planning` 기획, `prototype` 시제품, `ready` 판매 준비, `selling` 판매 중입니다. 사용자가 직접 바꾸며 자동으로 바뀌지 않습니다.
+- `status`는 `active` 진행 중, `archived` 보관함, `trash` 휴지통입니다. `PATCH`에 `status`를 보내 보관·복원하고, `DELETE`는 휴지통으로 옮깁니다. 보관함·휴지통에 있는 동안에는 작업실(`/projects/{id}/...`)을 열 수 없습니다(409 `PROJECT_NOT_ACTIVE`).
+- `note`는 나만의 메모장, `recent`는 최근 작업 20건(최신이 먼저), `plan_filled`는 기획 6개 항목 중 작성한 개수입니다. `next_action`(다음에 해야 할 일)은 AI 파이프라인이 채우는 자리입니다.
+- 생성할 때 `plan`에 마법사의 답변(`[{key, content, amount?}]`)을 함께 보낼 수 있습니다. 이때 답하지 않은 항목은 `SKIPPED`(건너뜀)로 남습니다.
+
 **글 (`/items`)**
-- 글마다 초안(`draft`)과 확정본(`decided`)을 따로 갖습니다. `state`는 초안이 있으면 `DRAFT`, 확정본만 있으면 `DECIDED`, 둘 다 없으면 `UNSET`입니다.
-- 확정된 글을 다시 고치는 동안에도 기존 확정본은 남아 있습니다. `DELETE .../draft`로 초안만 버리면 확정 상태로 돌아갑니다.
-- 확정할 때마다 이력이 쌓입니다. 내용은 다듬지 않고 받은 그대로 저장합니다.
+- 초안/확정 구분과 이력은 없습니다. 저장하면 바로 반영됩니다. 내용은 다듬지 않고 받은 그대로 저장합니다.
+- `PUT`은 `content`와 `title` 중 보낸 것만 바꿉니다.
 - 종류별로 다른 점은 아래뿐입니다.
 
 | `kind` | 무엇 | 다른 점 |
 |---|---|---|
-| `plan` | 상품기획 6개 항목 | `key`가 `ck_01` 상품 선정, `ck_02` 고객 선정, `ck_03` 구매 가치, `ck_04` 상품 구성, `ck_05` 가격·원가, `ck_06` 제작 가능성으로 고정. 새로 만들 수 없고, `DELETE`는 비워서 미작성으로 되돌립니다. 금액(`amount`)은 `ck_05`에만 넣습니다. 5,000자 |
-| `record` | 추가 기록 | `POST`로 만들고 `key`는 서버가 정합니다. 5,000자, 200개까지 |
-| `document` | 기획 산출물 | 만들 때 `doc_type` 필수. 50,000자. 기획이 바뀌어도 자동으로 고치지 않고, 문서를 만든 뒤 확정본이 바뀐 항목을 `stale_items`로 알려 줍니다 |
+| `plan` | 상품기획 6개 항목 | `key`가 `ck_01` 상품선정, `ck_02` 고객선정, `ck_03` 구매가치결정, `ck_04` 상품구성결정, `ck_05` 가격결정, `ck_06` 제작가능성으로 고정. 새로 만들거나 지울 수 없습니다. `state`는 `UNSET` 미작성, `SKIPPED` 건너뜀, `WRITTEN` 작성됨. 내용을 비워 저장하면 미작성으로 돌아가고 `skipped: true`를 함께 보내면 건너뜀입니다. 금액(`amount`)은 `ck_05`에만 넣으며 보내지 않으면 유지됩니다. 5,000자 |
+| `record` | AI와 함께 정리한 내용 | AI 답변을 검수해서 `POST`로 저장합니다(`title`, `content`, `message_id`). 같은 답변을 다시 검수하면 새로 만들지 않고 고칩니다. 5,000자, 200개까지 |
+| `document` | 산출물 | `POST`에 `message_id`만 보내면 그 답변의 문서 초안(`doc`)을 저장합니다. 이미 저장한 답변이면 같은 문서를 돌려줍니다. 편집 중인 내용은 `PUT`에 `as_draft: true`로 임시 저장하고(`draft`), `DELETE .../draft`로 버립니다. 50,000자, 200개까지 |
 
-- `POST /items/batch`는 기획 항목별로 `APPLIED`/`REJECTED`를 돌려주고 통과한 항목만 저장합니다.
+- 메시지의 `record_key`, `doc_key`는 그 답변에서 저장한 글입니다. 글을 지우면 비워지고 원래 대화는 남습니다.
 
 **경제성**
-- 비용의 `amount: null`은 "아직 모름"이며 0원과 다릅니다. 모르는 값과 승인하지 않은 가정(`basis: "ASSUMPTION"`, `approved: false`)은 계산에서 빼고 시나리오의 `excluded`에 남깁니다. 이때 `complete`는 `false`입니다.
-- 계산식은 임시입니다(`services/economics.py`의 `compute`).
-
-**AI 제안**
-- 제안은 기획과 따로 보관되고 `apply`해야 기획 항목이나 추가 기록에 들어갑니다. `apply`에는 사용자가 고친 최종 내용과 기획 항목의 현재 `revision`을 보냅니다.
+- 입력은 상품 1개 기준의 `material` 재료비, `labor` 공임, `packaging` 포장비, `shipping` 판매자 부담 배송비, `other` 기타, `fee_rate` 판매 수수료(%), `price` 비교할 판매가입니다. `null`은 "아직 모름"이며 0원과 다릅니다. 모르는 값이 있으면 계산하지 않습니다.
+- `GET /economics`는 입력값과 함께 `before`(변경 전 기준), `keep`(기존 판매가 유지), `change`(판매가 변경), `candidates`(입력한 판매가와 ±5,000원)를 계산해 돌려줍니다. 계산 결과는 저장하지 않습니다.
+- 비교 기준(`base`)은 `POST /economics/baseline`으로만 바뀝니다.
+- `POST /economics/confirm`(`mode`: `keep` 또는 `change`)을 해야 가격이 `plan/ck_05`에 반영됩니다. 후보 가격을 입력하는 것만으로는 확정 가격(`confirmed_price`)이 바뀌지 않습니다.
+- 계산식: 남는 금액 = 판매가 − 개당 비용 합 − 판매가 × 수수료(%). 세금은 포함하지 않습니다.
 
 **목록 조회**
 - 최신순이며 `?limit=`(기본 50, 최대 100)과 `?skip=`으로 나눠 받습니다.
@@ -190,9 +194,9 @@ users (사용자)
 - 응답의 `file_url`은 `/assets/{id}/file`입니다. 화면에서는 앞에 `/api`를 붙여 씁니다.
 
 **삭제**
-- 브랜드는 연결된 프로젝트나 파일이 남아 있으면 지울 수 없습니다(409).
-- **프로젝트를 지우면 딸린 자료(글, 경제성, 채팅, 제안)가 모두 지워집니다.** 휴지통이나 복구는 없습니다. 프로젝트에만 속한 파일은 지워지고, 브랜드에도 속한 파일은 연결만 풀립니다.
-- 진행 중(`queued`, `running`)인 AI 작업이 있으면 지울 수 없습니다. 끝난 작업 기록은 함께 지워집니다.
+- 브랜드를 지워도 연결된 프로젝트는 지워지지 않고 "브랜드 없음"으로 남습니다. 브랜드에만 속한 파일(로고 등)은 함께 지워집니다.
+- **프로젝트 `DELETE`는 휴지통으로 옮기는 것**이고 자료는 그대로 남아 복원할 수 있습니다. `DELETE ...?permanent=true`는 휴지통에 있는 프로젝트를 딸린 자료(글, 경제성, 채팅)까지 완전히 지웁니다. 이때 프로젝트에만 속한 파일은 지워지고, 브랜드에도 속한 파일은 연결만 풀립니다.
+- 진행 중(`queued`, `running`)인 AI 작업이 있으면 브랜드 삭제와 프로젝트 완전 삭제가 막힙니다. 끝난 작업 기록은 함께 지워집니다.
 - 파일을 지우면 그 파일을 로고로 쓰던 브랜드의 `logo_asset_id`가 비워지고, 프로젝트의 참고 파일 목록(`file_refs`)에서도 빠집니다.
 
 ## 백엔드 코드 구조
@@ -210,9 +214,9 @@ backend/
 │  ├─ routers/        경로 정의. 로직 없이 services를 부릅니다
 │  ├─ schemas/        요청·응답 모델 (Pydantic)
 │  └─ services/       실제 로직
-│     ├─ store.py       공통 도우미: 내 자료 확인, revision 조건부 저장, 중복 요청 방지
-│     ├─ items.py       글(기획 항목·추가 기록·산출물). 종류별 규칙은 RULES에 있습니다
-│     ├─ economics.py, chat.py, proposals.py, overview.py
+│     ├─ store.py       공통 도우미: 내 자료 확인, revision 조건부 저장, 최근 작업 기록, 중복 요청 방지
+│     ├─ items.py       글(기획 항목·AI 정리 내용·산출물). 종류별 규칙은 RULES에 있습니다
+│     ├─ economics.py, chat.py, overview.py
 │     └─ auth.py, brands.py, projects.py, assets.py
 └─ tests/             API 단위로 검증하는 테스트
 ```
@@ -227,9 +231,8 @@ backend/
 
 ## 아직 없는 것
 
-- **AI 생성과 챗봇 답변**: 파이프라인 코드를 받아 백엔드에 이식할 예정입니다. 저장 구조는 준비돼 있습니다. 답변은 `services/chat.py`의 `add_message(role="ASSISTANT")`, 제안은 `services/proposals.py`의 `create_proposal`, 글 저장은 `services/items.py`의 `save_item`·`create_item`, 프로젝트 내용은 `services/overview.py`의 `get_projection`을 쓰면 됩니다.
-- **전체 채팅(프로젝트 밖 채팅)**: UX v0.3에는 있지만 파이프라인 명세가 프로젝트당 채팅 하나로 정해 만들지 않았습니다.
-- **경제성 계산 기준**: 세금, 배송비 배부 등은 미정이라 임시 식을 씁니다.
+- **AI 생성과 챗봇 답변**: 파이프라인 코드를 받아 백엔드에 이식할 예정입니다. 저장 구조는 준비돼 있습니다. 답변은 `services/chat.py`의 `add_message(role="ASSISTANT", doc=문서 초안)`, 다음에 해야 할 일은 프로젝트의 `next_action`, 글 저장은 `services/items.py`의 `save_item`·`create_item`, 프로젝트 내용은 `services/overview.py`의 `get_projection`을 쓰면 됩니다.
+- **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·프로젝트당 20개·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
 - **`ai_jobs.job_type`**: 지정 6개 + `others`의 enum과 상세 문자열 필드로 바꿀 계획이며 값은 미정입니다.
 - **실제 화면**: `front/src/App.jsx`는 임시입니다.
 - **배포 준비**: HTTPS, 로그인 횟수 제한, 백엔드 8000 포트 닫기, 큰 파일 업로드 방식.

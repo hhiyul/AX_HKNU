@@ -90,11 +90,13 @@ async def test_delete_project_handles_jobs(client, login, db):
     active = await insert_job(db, me["id"], brand["id"], "running", project["id"])
     await insert_job(db, me["id"], brand["id"], "succeeded", project["id"])
     brand_only = await insert_job(db, me["id"], brand["id"], "succeeded")
-    res = await client.delete(f"/projects/{project['id']}")
+    # 휴지통으로 옮기는 것은 막지 않고, 완전히 지울 때만 진행 중인 작업을 확인한다.
+    assert (await client.delete(f"/projects/{project['id']}")).status_code == 204
+    res = await client.delete(f"/projects/{project['id']}", params={"permanent": "true"})
     assert res.status_code == 409
     assert res.json()["code"] == "PROJECT_IN_USE"
     await db.ai_jobs.update_one({"_id": active}, {"$set": {"status": "failed"}})
-    assert (await client.delete(f"/projects/{project['id']}")).status_code == 204
+    assert (await client.delete(f"/projects/{project['id']}", params={"permanent": "true"})).status_code == 204
     assert [job["_id"] async for job in db.ai_jobs.find({})] == [brand_only]
 
 

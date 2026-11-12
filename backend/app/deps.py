@@ -33,7 +33,11 @@ async def current_user(request: Request, db: AsyncDatabase = Depends(get_db)) ->
 async def owned_project(
     project_id: str, user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)
 ) -> dict:
-    return await get_owned_project(db, user["_id"], project_id)
+    project = await get_owned_project(db, user["_id"], project_id)
+    # 작업실은 진행 중인 프로젝트만 연다. 보관함·휴지통의 프로젝트는 먼저 복원해야 한다.
+    if project.get("archived_at") or project.get("deleted_at"):
+        raise AppError(409, "PROJECT_NOT_ACTIVE", "보관함이나 휴지통에 있는 프로젝트입니다. 먼저 복원해 주세요.")
+    return project
 
 
 class Workspace:

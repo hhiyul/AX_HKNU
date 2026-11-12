@@ -1,9 +1,9 @@
-"""프로젝트 개요와 AI에 넘길 맥락(Projection)."""
+"""프로젝트 개요(작업실 홈)와 AI에 넘길 맥락(Projection)."""
 import hashlib
 
 from pymongo.asynchronous.database import AsyncDatabase
 
-from app.services import economics, items
+from app.services import economics, items, projects
 
 SECTIONS = ["project_basic", "linked_brand", *items.PLAN_LABELS]
 
@@ -15,46 +15,30 @@ async def _brand(db: AsyncDatabase, project: dict) -> dict | None:
 
 
 async def get_overview(db: AsyncDatabase, project: dict) -> dict:
+    """작업실 홈에 필요한 것을 한 번에 모은다. 메모·최근 작업·다음 할 일은 project 안에 있다."""
     project_id = project["_id"]
     ident = {"project_id": project_id}
     brand = await _brand(db, project)
-    documents = await items.list_items(db, project_id, "document")
-    sheet = await economics.get_sheet(db, project_id)
-    adopted = await db.scenarios.find_one({**ident, "adopted_at": {"$ne": None}}, sort=[("adopted_at", -1)])
+    sheet = await economics.get_economics(db, project_id)
     return {
-        "project": project,
-        "brand": {"id": brand["_id"], "name": brand.get("name"), "status": brand["status"]} if brand else None,
+        "project": projects.view(project),
+        "brand": {"id": brand["_id"], "name": brand.get("name")} if brand else None,
         "plan": [
-            {"key": item["key"], "title": item["title"], "state": item["state"], "revision": item["revision"]}
+            {"key": item["key"], "title": item["title"], "state": item["state"]}
             for item in await items.list_items(db, project_id, "plan")
         ],
-        "proposals": {
-            "pending": await db.proposals.count_documents({**ident, "state": "PENDING"}),
-            "held": await db.proposals.count_documents({**ident, "state": "HELD"}),
+        "counts": {
+            "records": await db.items.count_documents({**ident, "kind": "record"}),
+            "documents": await db.items.count_documents({**ident, "kind": "document"}),
+            "messages": project.get("message_count", 0),
+            "assets": await db.assets.count_documents(ident),
         },
-        "documents": {
-            "count": len(documents),
-            "stale": [
-                {"key": doc["key"], "title": doc["title"], "stale_items": doc["stale_items"]}
-                for doc in documents
-                if doc["stale_items"]
-            ],
-        },
-        "records": await db.items.count_documents({**ident, "kind": "record"}),
         "economics": {
-            "cost_items": len(sheet["items"]),
-            "unknown_costs": sum(1 for item in sheet["items"] if item["amount"] is None),
-            "scenarios": await db.scenarios.count_documents(ident),
-            "adopted_price": adopted["price"] if adopted else None,
+            "confirmed_price": sheet["confirmed_price"],
+            "has_baseline": sheet["base"] is not None,
         },
         "active_jobs": await db.ai_jobs.count_documents({**ident, "status": {"$in": ["queued", "running"]}}),
     }
-
-
-def _part(part: dict | None) -> dict | None:
-    if part is None:
-        return None
-    return {"content": part["content"], "amount": part["amount"]}
 
 
 async def get_projection(db: AsyncDatabase, project: dict, wanted: list[str]) -> dict:
@@ -65,6 +49,7 @@ async def get_projection(db: AsyncDatabase, project: dict, wanted: list[str]) ->
             "revision": project.get("revision", 1),
             "name": project.get("name"),
             "description": project.get("description"),
+            "stage": project.get("stage", "planning"),
         }
     if "linked_brand" in wanted:
         brand = await _brand(db, project)
@@ -83,8 +68,8 @@ async def get_projection(db: AsyncDatabase, project: dict, wanted: list[str]) ->
                 "revision": item["revision"],
                 "label": item["title"],
                 "state": item["state"],
-                "draft": _part(item["draft"]),
-                "decided": _part(item["decided"]),
+                "content": item["content"],
+                "amount": item["amount"],
             }
     stamp = "|".join(f"{name}:{sections[name]['revision']}" for name in SECTIONS if name in sections)
     return {

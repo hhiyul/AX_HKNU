@@ -21,7 +21,9 @@ async def test_create_brand_defaults(client, login):
 async def test_create_brand_requires_login_and_type(client, login):
     assert (await client.post("/brands", json={"brand_type": "new"})).status_code == 401
     await login(client)
-    assert (await client.post("/brands", json={})).status_code == 422
+    # 종류를 보내지 않으면 이미 운영 중인 브랜드로 만든다.
+    created = await client.post("/brands", json={"name": "온유칠보", "description": "칠보 공방"})
+    assert created.status_code == 201 and created.json()["brand_type"] == "existing"
     assert (await client.post("/brands", json={"brand_type": "other"})).status_code == 422
 
 
@@ -124,16 +126,14 @@ async def test_logo_must_belong_to_brand(client, login, db):
     assert res.json()["logo_asset_id"] == logo_id
 
 
-async def test_delete_brand_blocked_by_project(client, login):
+async def test_delete_brand_keeps_its_projects(client, login):
     await login(client)
     brand = await create_brand(client)
     project = (await client.post("/projects", json={"name": "상품", "brand_id": brand["id"]})).json()
-    res = await client.delete(f"/brands/{brand['id']}")
-    assert res.status_code == 409
-    assert res.json()["code"] == "BRAND_IN_USE"
-    assert (await client.delete(f"/projects/{project['id']}")).status_code == 204
     assert (await client.delete(f"/brands/{brand['id']}")).status_code == 204
     assert (await client.get(f"/brands/{brand['id']}")).status_code == 404
+    # 프로젝트는 지우지 않고 "브랜드 없음"으로 남긴다.
+    assert (await client.get(f"/projects/{project['id']}")).json()["brand_id"] is None
 
 
 async def test_text_length_limits(client, login):

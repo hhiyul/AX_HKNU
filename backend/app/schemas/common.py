@@ -1,7 +1,7 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from bson import ObjectId
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictInt, StringConstraints
 
 
 class RequestModel(BaseModel):
@@ -21,6 +21,10 @@ ShortText = Annotated[str | None, StringConstraints(max_length=200), AfterValida
 LongText = Annotated[str | None, StringConstraints(max_length=5000), AfterValidator(_blank_to_none)]
 # 수정 요청에 실어 보내는 버전. 읽은 뒤 다른 곳에서 바뀌었으면 409 REVISION_CONFLICT.
 Revision = Annotated[int, Field(ge=0)]
+# 금액(원). 0원과 "아직 모름"(null)을 구분한다.
+Amount = Annotated[StrictInt, Field(ge=0, le=2**63 - 1)]
+# 상품기획 6개 항목의 키. AI 파이프라인 명세의 섹션 이름과 맞춘다.
+PlanKey = Literal["ck_01", "ck_02", "ck_03", "ck_04", "ck_05", "ck_06"]
 TextList = Annotated[list[Annotated[str, StringConstraints(max_length=100)]], Field(max_length=50)]
 
 
