@@ -34,10 +34,12 @@
   <div class="panel" aria-live="polite">
     <label>응답</label>
     <div id="output">아직 요청하지 않았습니다.</div>
+    <small id="details"></small>
   </div>
   <script>
     const form = document.querySelector('#probe-form');
     const output = document.querySelector('#output');
+    const details = document.querySelector('#details');
     const button = document.querySelector('#submit');
     fetch('/api/mode').then(r => { if (!r.ok) throw Error(); return r.json(); }).then(({mode}) => {
       if (mode === 'mock') {
@@ -53,10 +55,17 @@
       event.preventDefault();
       button.disabled = true;
       output.textContent = '요청을 처리하고 있습니다…';
+      details.textContent = '';
       try {
         const response = await fetch('/api/probe', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:document.querySelector('#text').value})});
         const data = await response.json();
         output.textContent = response.ok ? data.text : `요청을 완료하지 못했습니다. (${data.code || 'INVALID_INPUT'})`;
+        if (response.ok) {
+          const usage = data.usage ? ` · 입력 ${data.usage.input_tokens} / 출력 ${data.usage.output_tokens} 토큰` : ' · 토큰 사용량 미확인';
+          details.textContent = `모델: ${data.model}${usage}`;
+        } else if (data.delivery) {
+          details.textContent = `전송 상태: ${data.delivery}`;
+        }
       } catch (_) { output.textContent = '서버 응답을 확인하지 못했습니다.'; }
       button.disabled = false;
     });

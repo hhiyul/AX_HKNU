@@ -2,7 +2,11 @@
 
 기준일: 2026-11-12. 상태: **계획 작성 / 코드·테스트 구현 및 실행 NOT_RUN**. 이 문서는 구현 순서와 검증 목표이며 제품 구현 완료나 실서비스 통합 승인이 아닙니다. [사용자 기능 v0.2](../02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md), [04 사용자 기능](../02-user-feature-spec/planning-output-user-spec.md), [모듈 명세](ai-pipeline-module-feature-spec-v0.1.md), [결정표](grill-feature-decisions.md)를 유지합니다.
 
-**2026-11-12 P1~P3 구현 결과:** 이후 기준 HEAD `3380586e267483c361bd24546fb6c0e81c02a612`에서 환경 키와 `httpx` Responses 어댑터, 독립 단위시험 및 localhost 전용 개발 화면을 추가했습니다. `backend`에서 `..\.venv\Scripts\python.exe -m pytest -q tests_unit` 실행 결과 **41 passed**. 외부 OpenAI·MongoDB 없이 가짜 전송과 테스트 전용 ASGI 경계를 사용했고 기존 `/openai/test` 유지 및 운영 앱의 개발 경로 미등록을 확인했습니다. 브라우저에서 모의 모드 입력·응답을 확인했습니다. P4 실제 OpenAI 생성 호출과 P5 제품 통합은 **NOT_RUN**입니다. 아래 표의 상태와 본문은 작성 당시 계획을 보존합니다.
+**2026-11-12 P1~P3 구현 결과:** 이후 기준 HEAD `3380586e267483c361bd24546fb6c0e81c02a612`에서 환경 키와 `httpx` Responses 어댑터, 독립 단위시험 및 localhost 전용 개발 화면을 추가했습니다. `backend`에서 `..\.venv\Scripts\python.exe -m pytest -q tests_unit` 실행 결과 **41 passed**. 외부 OpenAI·MongoDB 없이 가짜 전송과 테스트 전용 ASGI 경계를 사용했고 기존 `/openai/test` 유지 및 운영 앱의 개발 경로 미등록을 확인했습니다. 브라우저에서 모의 모드 입력·응답을 확인했습니다. 당시 P4와 P5는 NOT_RUN이었으며 P4는 아래에 후속 결과가 있습니다. 아래 표의 상태와 본문은 작성 당시 계획을 보존합니다.
+
+**2026-11-12 P4 실연결 결과:** 사용자가 최소 유료 호출을 허용하고 지정한 프로젝트 `.env`의 `OPENAI_API_KEY`를 로컬 서버 프로세스 환경으로 주입했습니다. 약 16:12 KST에 localhost 개발 화면에서 합성 텍스트를 사용해 `gpt-6-luna` Responses 생성 요청 **1회**를 보냈고 응답 텍스트를 정상 수신했습니다. 관측된 사용량은 입력 19·출력 14토큰이며 실제 청구 금액은 확인하지 않았습니다. 재시도·추가 생성 요청은 없었습니다. 이는 Provider 실연결 검증이고 03/04 제품 기능·DB 통합 또는 생성 품질 인수가 아닙니다. P5는 NOT_RUN입니다.
+
+재사용 가능한 `backend/tests_live/test_openai_live.py`는 `AX_OPENAI_LIVE_TEST=1`을 명시하고 프로세스에 `OPENAI_API_KEY`가 전달된 경우에만 실제 생성 요청을 합니다. 키가 존재한다는 이유만으로 실행되지 않습니다. 이번 P4 성공은 브라우저 경로를 통한 확인이며, 이 opt-in pytest의 실호출 실행을 뜻하지 않습니다.
 
 개발 화면은 `backend`에서 `..\.venv\Scripts\python.exe -m uvicorn devtools.openai_probe:app --host 127.0.0.1 --port 8765 --no-access-log`로 실행합니다. 기본은 네트워크 호출 없는 모의 모드입니다. 별도 승인 후 실행 프로세스에 `AX_OPENAI_PROBE_LIVE=1`과 `OPENAI_API_KEY`를 제공하면 화면에 실제 호출 모드가 표시되며, 사용자가 전송을 눌렀을 때만 호출합니다. 환경변수 값은 문서나 명령줄에 적지 않습니다. 이 앱은 운영 `main.py`에 등록되지 않으며 loopback·Host·Origin을 확인합니다.
 
