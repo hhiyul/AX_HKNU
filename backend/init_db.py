@@ -6,6 +6,7 @@
 - 문서는 건드리지 않고 규칙과 인덱스만 맞춘다.
 - 여기 없는 필드도 저장할 수 있다. 정의한 필드의 타입과 필수 여부만 검사한다.
 - 인덱스는 추가만 한다. 여기서 지운 인덱스는 Atlas에서 직접 지워야 한다.
+- 컬렉션도 지우지 않는다. 더는 쓰지 않는 item_versions, scenarios, proposals는 Atlas에서 직접 지운다.
 """
 import os
 import sys
@@ -73,6 +74,16 @@ COLLECTIONS = {
             "brand_id": ["objectId"],
             "description": ["string"],
             # AI 채팅 설정과 메시지 수. 채팅은 프로젝트당 하나라 따로 컬렉션을 두지 않는다.
+            # 진행 단계(planning, prototype, ready, selling), 메모장, AI가 채우는 다음 할 일
+            "stage": ["string"],
+            "note": ["string"],
+            "next_action": ["string"],
+            # 보관함·휴지통에 들어간 시각. 둘 다 없으면 진행 중이다.
+            "archived_at": ["date"],
+            "deleted_at": ["date"],
+            # 기획 6개 항목 중 작성한 개수와 최근 작업 20건
+            "plan_filled": ["int"],
+            "recent": ["array"],
             "search_enabled": ["bool"],
             "file_refs": ["array"],
             "chip_refs": ["array"],
@@ -96,62 +107,31 @@ COLLECTIONS = {
             "ai_job_id": ["objectId"],
         },
     ),
-    # 프로젝트에 저장하는 글. kind로 구분한다: plan(기획 6개 항목), record(추가 기록), document(산출물).
+    # 프로젝트에 저장하는 글. kind로 구분한다: plan(기획 6개 항목), record(AI와 함께 정리한 내용), document(산출물).
     # 종류마다 내용이 조금씩 달라 공통 필드만 검사한다. 나머지 규칙은 services/items.py에 있다.
     "items": build_schema(
         required={
             **OWNED,
             "kind": enum("plan", "record", "document"),
             "key": "string",
-            "version": "int",
             "revision": "int",
             **TIMESTAMPS,
         },
-        optional={"title": ["string"], "draft": ["object"], "decided": ["object"]},
-    ),
-    # 확정할 때마다 쌓이는 이력
-    "item_versions": build_schema(
-        required={
-            **OWNED,
-            "kind": enum("plan", "record", "document"),
-            "key": "string",
-            "version": "int",
-            "content": "string",
-            "decided_at": "date",
+        optional={
+            "title": ["string"],
+            "content": ["string"],
+            "amount": ["int", "long"],
+            "skipped": ["bool"],
+            # 이 글을 저장한 AI 답변
+            "message_id": ["objectId"],
+            # 산출물 편집기의 임시 저장
+            "draft": ["object"],
         },
-        optional={"title": ["string"], "amount": ["int", "long"], "source_ref": ["objectId"]},
     ),
-    # 경제성 비용 입력. 프로젝트당 문서 하나.
+    # 경제성 입력. 프로젝트당 문서 하나. cost는 지금 입력한 값, base는 변경 전 비교 기준이다.
     "cost_sheets": build_schema(
-        required={**OWNED, "items": "array", "revision": "int", **TIMESTAMPS},
-        optional={},
-    ),
-    "scenarios": build_schema(
-        required={
-            **OWNED,
-            "label": "string",
-            "price": ["int", "long"],
-            "unit_cost": ["int", "long"],
-            "fee": ["int", "long"],
-            "profit": ["int", "long"],
-            "complete": "bool",
-            "uses_assumptions": "bool",
-            "excluded": "array",
-            "sheet_revision": "int",
-            "created_at": "date",
-        },
-        optional={"margin_rate": ["double", "int", "long"], "adopted_at": ["date"]},
-    ),
-    "proposals": build_schema(
-        required={
-            **OWNED,
-            "target": "string",
-            "content": "string",
-            "state": enum("PENDING", "HELD", "APPLIED", "REJECTED"),
-            "base_revision": "int",
-            **TIMESTAMPS,
-        },
-        optional={"message_id": ["objectId"], "applied_content": ["string"], "decided_at": ["date"]},
+        required={**OWNED, "revision": "int", **TIMESTAMPS},
+        optional={"cost": ["object"], "base": ["object"]},
     ),
     "messages": build_schema(
         required={
@@ -163,7 +143,8 @@ COLLECTIONS = {
             "completion": enum("COMPLETE", "PARTIAL", "UNKNOWN"),
             "created_at": "date",
         },
-        optional={},
+        # doc은 AI가 만든 문서 초안, record_key와 doc_key는 이 답변에서 저장한 글
+        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"]},
     ),
     # 중복 요청 방지 기록. 7일 뒤 자동으로 지워진다.
     "requests": build_schema(
@@ -218,12 +199,7 @@ INDEXES = {
         ([("project_id", ASCENDING), ("kind", ASCENDING), ("key", ASCENDING)], UNIQUE),
         ([("project_id", ASCENDING), ("kind", ASCENDING), ("updated_at", DESCENDING)], {}),
     ],
-    "item_versions": [
-        ([("project_id", ASCENDING), ("kind", ASCENDING), ("key", ASCENDING), ("version", DESCENDING)], {})
-    ],
     "cost_sheets": [([("project_id", ASCENDING)], UNIQUE)],
-    "scenarios": [([("project_id", ASCENDING), ("created_at", DESCENDING)], {})],
-    "proposals": [([("project_id", ASCENDING), ("state", ASCENDING), ("created_at", DESCENDING)], {})],
     "messages": [([("project_id", ASCENDING), ("ordinal", ASCENDING)], {})],
     "requests": [
         ([("user_id", ASCENDING), ("key", ASCENDING)], UNIQUE),
@@ -233,7 +209,7 @@ INDEXES = {
 
 
 def migrate(db):
-    """v0.3 이전 문서를 새 구조에 맞춘다. 여러 번 실행해도 결과가 같다."""
+    """예전 문서를 새 구조에 맞춘다. 여러 번 실행해도 결과가 같다."""
     owners = {brand["_id"]: brand["user_id"] for brand in db.brands.find({}, {"user_id": 1})}
     moved = 0
     for name in ("projects", "assets"):
@@ -244,6 +220,17 @@ def migrate(db):
     moved += db.projects.update_many({"revision": {"$exists": False}}, {"$set": {"revision": 1}}).modified_count
     # 이름 없이 저장된 예전 프로젝트
     moved += db.projects.update_many({"name": None}, {"$set": {"name": "이름 없는 프로젝트"}}).modified_count
+    if "items" in db.list_collection_names():
+        # 초안·확정으로 나뉘어 있던 글은 지금 보이던 내용(초안이 있으면 초안) 하나로 합친다.
+        for document in db["items"].find({"content": {"$exists": False}}):
+            part = document.get("draft") or document.get("decided") or {}
+            changes = {"content": part.get("content") or "", "amount": part.get("amount"), "draft": None}
+            moved += db["items"].update_one({"_id": document["_id"]}, {"$set": changes}).modified_count
+        for project in db.projects.find({"plan_filled": {"$exists": False}}, {"_id": 1}):
+            filled = db["items"].count_documents(
+                {"project_id": project["_id"], "kind": "plan", "content": {"$nin": ["", None]}}
+            )
+            moved += db.projects.update_one({"_id": project["_id"]}, {"$set": {"plan_filled": filled}}).modified_count
     return moved
 
 

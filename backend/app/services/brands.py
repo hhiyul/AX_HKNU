@@ -7,6 +7,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from app.errors import AppError
 from app.schemas.brands import BrandCreate, BrandUpdate
 from app.services.store import get_owned_brand, not_found, parse_object_id, remove_jobs
+from app.storage import delete_file
 
 
 def ensure_completable(brand: dict, changes: dict) -> None:
@@ -65,8 +66,13 @@ async def update_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str, body
 
 async def delete_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str) -> None:
     brand = await get_owned_brand(db, user_id, brand_id)
-    in_use = {"brand_id": brand["_id"]}
-    if await db.projects.find_one(in_use) or await db.assets.find_one(in_use):
-        raise AppError(409, "BRAND_IN_USE", "브랜드에 상품이나 파일이 남아 있습니다.")
-    await remove_jobs(db, in_use, AppError(409, "BRAND_IN_USE", "브랜드에 진행 중인 작업이 있습니다."))
+    ident = {"brand_id": brand["_id"]}
+    await remove_jobs(db, ident, AppError(409, "BRAND_IN_USE", "브랜드에 진행 중인 작업이 있습니다."))
+    # 브랜드 정보만 지운다. 연결된 프로젝트와 그 자료는 "브랜드 없음"으로 남긴다.
+    await db.projects.update_many(ident, {"$set": {"brand_id": None}})
+    await db.assets.update_many({**ident, "project_id": {"$ne": None}}, {"$set": {"brand_id": None}})
+    # 브랜드에만 속한 파일(로고 등)은 함께 지운다.
+    async for asset in db.assets.find(ident):
+        await db.assets.delete_one({"_id": asset["_id"]})
+        await delete_file(asset["_id"])
     await db.brands.delete_one({"_id": brand["_id"]})
