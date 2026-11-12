@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenAI 송수신 확인</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #202622; background: #f4f5f1; }
+    body { max-width: 760px; margin: 0 auto; padding: 56px 24px; }
+    h1 { font-size: 1.7rem; margin: 0 0 12px; }
+    p { color: #4e5b52; line-height: 1.65; }
+    .panel { background: #fff; border: 1px solid #d6ded8; padding: 24px; margin-top: 24px; }
+    .mode { font-weight: 700; color: #265d3b; }
+    label { display: block; font-weight: 650; margin-bottom: 10px; }
+    textarea { box-sizing: border-box; width: 100%; min-height: 140px; padding: 12px; font: inherit; border: 1px solid #aab8ae; resize: vertical; }
+    button { margin-top: 16px; border: 0; padding: 11px 18px; background: #244c33; color: white; font: inherit; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    #output { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; min-height: 30px; }
+    small { color: #59685d; }
+  </style>
+</head>
+<body>
+  <h1>OpenAI 송수신 확인</h1>
+  <p>백엔드의 요청과 응답 경로를 확인하는 로컬 개발 화면입니다. 실제 프로젝트 데이터는 입력하지 마세요.</p>
+  <p id="mode" class="mode" role="status">실행 모드를 확인하고 있습니다.</p>
+  <div class="panel">
+    <form id="probe-form">
+      <label for="text">테스트 메시지</label>
+      <textarea id="text" maxlength="4000" required>안녕하세요. 짧은 테스트 응답을 부탁합니다.</textarea>
+      <small>화면을 여는 것만으로 요청을 보내지 않습니다.</small><br>
+      <button id="submit" type="submit" disabled>응답 확인</button>
+    </form>
+  </div>
+  <div class="panel" aria-live="polite">
+    <label>응답</label>
+    <div id="output">아직 요청하지 않았습니다.</div>
+  </div>
+  <script>
+    const form = document.querySelector('#probe-form');
+    const output = document.querySelector('#output');
+    const button = document.querySelector('#submit');
+    fetch('/api/mode').then(r => { if (!r.ok) throw Error(); return r.json(); }).then(({mode}) => {
+      if (mode === 'mock') {
+        document.querySelector('#mode').textContent = '모의 모드 · 실제 OpenAI 호출과 비용이 없습니다.';
+        button.textContent = '모의 응답 확인';
+      } else if (mode === 'live') {
+        document.querySelector('#mode').textContent = '실제 호출 모드 · 전송 시 OpenAI 요금이 발생할 수 있습니다.';
+        button.textContent = '실제 요청 보내기';
+      } else { throw Error(); }
+      button.disabled = false;
+    }).catch(() => { document.querySelector('#mode').textContent = '실행 모드를 확인하지 못했습니다.'; });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      button.disabled = true;
+      output.textContent = '요청을 처리하고 있습니다…';
+      try {
+        const response = await fetch('/api/probe', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:document.querySelector('#text').value})});
+        const data = await response.json();
+        output.textContent = response.ok ? data.text : `요청을 완료하지 못했습니다. (${data.code || 'INVALID_INPUT'})`;
+      } catch (_) { output.textContent = '서버 응답을 확인하지 못했습니다.'; }
+      button.disabled = false;
+    });
+  </script>
+</body>
+</html>

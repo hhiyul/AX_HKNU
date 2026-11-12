@@ -2,6 +2,10 @@
 
 기준일: 2026-11-12. 상태: **계획 작성 / 코드·테스트 구현 및 실행 NOT_RUN**. 이 문서는 구현 순서와 검증 목표이며 제품 구현 완료나 실서비스 통합 승인이 아닙니다. [사용자 기능 v0.2](../02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md), [04 사용자 기능](../02-user-feature-spec/planning-output-user-spec.md), [모듈 명세](ai-pipeline-module-feature-spec-v0.1.md), [결정표](grill-feature-decisions.md)를 유지합니다.
 
+**2026-11-12 P1~P3 구현 결과:** 이후 기준 HEAD `3380586e267483c361bd24546fb6c0e81c02a612`에서 환경 키와 `httpx` Responses 어댑터, 독립 단위시험 및 localhost 전용 개발 화면을 추가했습니다. `backend`에서 `..\.venv\Scripts\python.exe -m pytest -q tests_unit` 실행 결과 **41 passed**. 외부 OpenAI·MongoDB 없이 가짜 전송과 테스트 전용 ASGI 경계를 사용했고 기존 `/openai/test` 유지 및 운영 앱의 개발 경로 미등록을 확인했습니다. 브라우저에서 모의 모드 입력·응답을 확인했습니다. P4 실제 OpenAI 생성 호출과 P5 제품 통합은 **NOT_RUN**입니다. 아래 표의 상태와 본문은 작성 당시 계획을 보존합니다.
+
+개발 화면은 `backend`에서 `..\.venv\Scripts\python.exe -m uvicorn devtools.openai_probe:app --host 127.0.0.1 --port 8765 --no-access-log`로 실행합니다. 기본은 네트워크 호출 없는 모의 모드입니다. 별도 승인 후 실행 프로세스에 `AX_OPENAI_PROBE_LIVE=1`과 `OPENAI_API_KEY`를 제공하면 화면에 실제 호출 모드가 표시되며, 사용자가 전송을 눌렀을 때만 호출합니다. 환경변수 값은 문서나 명령줄에 적지 않습니다. 이 앱은 운영 `main.py`에 등록되지 않으며 loopback·Host·Origin을 확인합니다.
+
 ## 1. 목표와 범위
 
 팀원 시스템 통합을 기다리지 않고 Python 백엔드가 `OPENAI_API_KEY`를 서버 환경에서 읽고, 합성 텍스트로 OpenAI Responses 요청을 전송해 응답과 실패를 구분하는 경로를 구현·시험합니다. 03 대화와 04 문서 생성의 초기 모델은 각각 D-UF-109·GD-040의 `gpt-6-luna`입니다. 문서 생성·CK 적용·04 저장을 완성했다는 의미는 아닙니다.
