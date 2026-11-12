@@ -18,13 +18,11 @@ ItemKind = Literal["plan", "record", "document"]
 
 
 class ItemSave(RequestModel):
-    # content와 title은 보내지 않으면 그대로 둔다. 기획 항목은 내용을 비워 보내면 미작성으로 돌아간다.
+    # content와 title은 보내지 않으면 그대로 둔다. 기획 항목은 내용을 비워 보내면 건너뜀으로 돌아간다.
     content: Content = None
     title: Title = None
     # 가격결정(plan/ck_05)에만 넣을 수 있는 판매가격. 보내지 않으면 그대로 둔다.
     amount: Amount = None
-    # 기획 항목을 비워 저장할 때 "건너뜀"으로 표시할지
-    skipped: bool = False
     # 산출물 편집기의 임시 저장. 저장된 문서는 그대로 두고 draft만 바꾼다.
     as_draft: bool = False
     revision: Revision
@@ -48,8 +46,8 @@ class ItemOut(BaseModel):
     kind: ItemKind
     key: str
     title: str | None = None
-    # 기획 항목: UNSET 미작성, SKIPPED 건너뜀, WRITTEN 작성됨. 나머지 글은 늘 WRITTEN.
-    state: Literal["UNSET", "SKIPPED", "WRITTEN"]
+    # 기획 항목: SKIPPED 건너뜀(화면에는 "미작성"), WRITTEN 작성됨. 나머지 글은 늘 WRITTEN.
+    state: Literal["SKIPPED", "WRITTEN"]
     content: str | None = None
     amount: int | None = None
     message_id: str | None = None

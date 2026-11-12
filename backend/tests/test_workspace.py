@@ -38,12 +38,14 @@ async def recent(client, url):
 # ---------- 상품기획 6개 항목 ----------
 
 
-async def test_plan_starts_with_six_unset_items(client, url):
+async def test_plan_starts_with_six_skipped_items(client, url, db):
     items = (await client.get(f"{url}/items/plan")).json()
     assert [item["key"] for item in items] == [f"ck_0{n}" for n in range(1, 7)]
     assert items[0]["title"] == "상품선정"
-    assert {item["state"] for item in items} == {"UNSET"}
-    assert {item["revision"] for item in items} == {0}
+    # 마법사를 거치지 않아도 6개 항목이 건너뜀으로 저장돼 있다.
+    assert {item["state"] for item in items} == {"SKIPPED"}
+    assert {item["revision"] for item in items} == {1}
+    assert await db.items.count_documents({"kind": "plan"}) == 6
     assert (await client.get(f"{url}/items/plan/ck_07")).status_code == 422
     assert (await client.get(f"{url}/items/memo")).status_code == 422
     # 기획 항목은 6개로 고정이라 새로 만들거나 지울 수 없다.
@@ -52,36 +54,42 @@ async def test_plan_starts_with_six_unset_items(client, url):
 
 
 async def test_plan_save_applies_at_once(client, url):
-    saved = (await save(client, url, "ck_01", "칠보 팔찌", 0)).json()
-    assert (saved["state"], saved["content"], saved["revision"]) == ("WRITTEN", "칠보 팔찌", 1)
+    saved = (await save(client, url, "ck_01", "칠보 팔찌", 1)).json()
+    assert (saved["state"], saved["content"], saved["revision"]) == ("WRITTEN", "칠보 팔찌", 2)
     assert (await client.get(url)).json()["plan_filled"] == 1
     assert (await recent(client, url))[0] == "상품선정 수정"
-    # 비워서 저장하면 미작성으로 돌아간다. skipped를 보내면 건너뜀으로 남는다.
-    cleared = (await save(client, url, "ck_01", "  ", 1)).json()
-    assert (cleared["state"], cleared["content"]) == ("UNSET", None)
-    skipped = (await save(client, url, "ck_01", "", 2, skipped=True)).json()
-    assert skipped["state"] == "SKIPPED"
+    # 비워서 저장하면 건너뜀으로 돌아간다. 미작성 상태는 따로 없다.
+    cleared = (await save(client, url, "ck_01", "  ", 2)).json()
+    assert (cleared["state"], cleared["content"]) == ("SKIPPED", None)
     assert (await client.get(url)).json()["plan_filled"] == 0
+    assert (await save(client, url, "ck_01", "", 3, skipped=True)).status_code == 422
+
+
+async def test_plan_item_without_document_reads_as_skipped(client, url, db):
+    # 6개를 깔기 전에 만든 프로젝트는 문서가 없을 수 있다. 그래도 건너뜀으로 보이고 저장할 수 있다.
+    await db.items.delete_many({"kind": "plan"})
+    item = (await client.get(f"{url}/items/plan/ck_02")).json()
+    assert (item["state"], item["revision"]) == ("SKIPPED", 0)
+    assert (await save(client, url, "ck_02", "선물 고객", 0)).json()["state"] == "WRITTEN"
 
 
 async def test_plan_save_conflicts_and_validation(client, url):
-    await save(client, url, "ck_01", "처음", 0)
-    stale = await save(client, url, "ck_01", "예전 탭", 0)
+    await save(client, url, "ck_01", "처음", 1)
+    stale = await save(client, url, "ck_01", "예전 탭", 1)
     assert stale.status_code == 409 and stale.json()["code"] == "REVISION_CONFLICT"
-    assert (await save(client, url, "ck_01", "x" * 5001, 1)).status_code == 422
-    assert (await client.put(f"{url}/items/plan/ck_02", json={"revision": 0})).status_code == 422
-    res = await save(client, url, "ck_01", "가격", 1, amount=1000)
+    assert (await save(client, url, "ck_01", "x" * 5001, 2)).status_code == 422
+    res = await save(client, url, "ck_01", "가격", 2, amount=1000)
     assert res.status_code == 422 and res.json()["code"] == "AMOUNT_NOT_ALLOWED"
-    assert (await save(client, url, "ck_01", "x", 1, state="DRAFT")).status_code == 422
+    assert (await save(client, url, "ck_01", "x", 2, state="DRAFT")).status_code == 422
 
 
 async def test_price_amount_is_kept_until_cleared(client, url):
-    priced = (await save(client, url, "ck_05", "35,000원", 0, amount=35000)).json()
+    priced = (await save(client, url, "ck_05", "35,000원", 1, amount=35000)).json()
     assert priced["amount"] == 35000
     # 글만 고치면 금액은 그대로다.
-    assert (await save(client, url, "ck_05", "35,000원 · 검토 중", 1)).json()["amount"] == 35000
-    assert (await save(client, url, "ck_05", "", 2, amount=1000)).status_code == 422
-    assert (await save(client, url, "ck_05", "", 2)).json()["amount"] is None
+    assert (await save(client, url, "ck_05", "35,000원 · 검토 중", 2)).json()["amount"] == 35000
+    assert (await save(client, url, "ck_05", "", 3, amount=1000)).status_code == 422
+    assert (await save(client, url, "ck_05", "", 3)).json()["amount"] is None
 
 
 async def test_wizard_answers_create_plan_with_skips(client, login):
@@ -111,11 +119,11 @@ async def test_wizard_answers_create_plan_with_skips(client, login):
 
 async def test_idempotency_key_applies_once(client, url):
     headers = {"Idempotency-Key": "save-1"}
-    body = {"content": "칠보 팔찌", "revision": 0}
+    body = {"content": "칠보 팔찌", "revision": 1}
     first = await client.put(f"{url}/items/plan/ck_01", json=body, headers=headers)
     again = await client.put(f"{url}/items/plan/ck_01", json=body, headers=headers)
     assert first.status_code == again.status_code == 200
-    assert again.json()["revision"] == 1
+    assert again.json()["revision"] == 2
     result = (await client.get("/requests/save-1")).json()
     assert result["state"] == "APPLIED"
     assert (await client.get("/requests/unknown")).status_code == 404
@@ -234,7 +242,7 @@ async def test_document_editor_draft_and_rename(client, url):
     assert (await client.put(path, json={"title": " ", "revision": 6})).status_code == 422
     assert (await client.put(path, json={"content": "", "revision": 6})).status_code == 422
     # 임시 저장은 산출물에만 있다.
-    res = await client.put(f"{url}/items/plan/ck_01", json={"content": "x", "as_draft": True, "revision": 0})
+    res = await client.put(f"{url}/items/plan/ck_01", json={"content": "x", "as_draft": True, "revision": 1})
     assert res.status_code == 422
 
 
@@ -300,7 +308,7 @@ async def test_confirming_price_updates_the_plan(client, url):
 
 
 async def test_keep_uses_confirmed_price_without_baseline(client, url):
-    await save(client, url, "ck_05", "30,000원", 0, amount=30000)
+    await save(client, url, "ck_05", "30,000원", 1, amount=30000)
     result = (await client.put(f"{url}/economics", json={"cost": COSTS, "revision": 0})).json()
     assert result["keep"]["price"] == 30000 and result["keep"]["delta"] is None
     assert result["change"] is None
@@ -312,8 +320,8 @@ async def test_keep_uses_confirmed_price_without_baseline(client, url):
 
 
 async def test_overview_collects_project_state(client, url, db):
-    await save(client, url, "ck_01", "칠보 팔찌", 0)
-    await save(client, url, "ck_05", "35,000원", 0, amount=35000)
+    await save(client, url, "ck_01", "칠보 팔찌", 1)
+    await save(client, url, "ck_05", "35,000원", 1, amount=35000)
     message_id = await assistant_says(db, url, "정리했어요.")
     await create(client, url, "record", title="정리", content="내용", message_id=message_id)
     await create(client, url, "document", title="기획서", content="본문")
@@ -325,7 +333,7 @@ async def test_overview_collects_project_state(client, url, db):
     assert overview["project"]["next_action"] is None
     assert overview["project"]["recent"][0]["text"] == "나만의 메모 수정"
     assert overview["brand"] is None
-    assert [item["state"] for item in overview["plan"]] == ["WRITTEN", "UNSET", "UNSET", "UNSET", "WRITTEN", "UNSET"]
+    assert [item["state"] for item in overview["plan"]] == ["WRITTEN", "SKIPPED", "SKIPPED", "SKIPPED", "WRITTEN", "SKIPPED"]
     assert overview["counts"] == {"records": 1, "documents": 1, "messages": 1, "assets": 0}
     assert overview["economics"] == {"confirmed_price": 35000, "has_baseline": False}
     assert overview["active_jobs"] == 0
@@ -333,7 +341,7 @@ async def test_overview_collects_project_state(client, url, db):
 
 async def test_recent_keeps_latest_twenty(client, url):
     for revision in range(25):
-        await save(client, url, "ck_01", f"내용 {revision}", revision)
+        await save(client, url, "ck_01", f"내용 {revision}", revision + 1)
     entries = (await client.get(url)).json()["recent"]
     assert len(entries) == 20
     assert entries[0]["at"] >= entries[-1]["at"]
@@ -343,11 +351,11 @@ async def test_projection_sections_and_bundle_revision(client, url):
     full = (await client.get(f"{url}/projection")).json()
     assert list(full["sections"]) == ["project_basic", "linked_brand", *[f"ck_0{n}" for n in range(1, 7)]]
     assert full["sections"]["ck_01"] == {
-        "revision": 0, "label": "상품선정", "state": "UNSET", "content": None, "amount": None,
+        "revision": 1, "label": "상품선정", "state": "SKIPPED", "content": None, "amount": None,
     }
     part = (await client.get(f"{url}/projection", params={"sections": "project_basic,ck_01"})).json()
     assert list(part["sections"]) == ["project_basic", "ck_01"]
-    await save(client, url, "ck_01", "칠보 팔찌", 0)
+    await save(client, url, "ck_01", "칠보 팔찌", 1)
     after = (await client.get(f"{url}/projection", params={"sections": "project_basic,ck_01"})).json()
     assert after["bundle_revision"] != part["bundle_revision"]
     assert after["sections"]["ck_01"]["content"] == "칠보 팔찌"

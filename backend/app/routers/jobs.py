@@ -16,8 +16,11 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 class JobOut(BaseModel):
     id: str
     user_id: str
-    brand_id: str
+    # 브랜드 없는 프로젝트의 작업이면 없다.
+    brand_id: str | None = None
     project_id: str | None = None
+    # 작업이 다루는 기획 항목(ck_01~ck_06). 값은 DB 규칙(init_db.py)이 검사한다.
+    # 규칙이 바뀌기 전에 저장된 작업도 조회는 되도록 여기서는 문자열로 둔다.
     job_type: str
     input: dict
     status: Literal["queued", "running", "succeeded", "failed"]

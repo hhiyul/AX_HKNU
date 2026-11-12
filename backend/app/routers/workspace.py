@@ -50,7 +50,7 @@ async def save_item(
             lambda: items.save_item(
                 ws.db, ws.user_id, ws.project_id, kind, key, body.revision,
                 content=body.content, title=body.title, amount=body.amount,
-                skipped=body.skipped, as_draft=body.as_draft,
+                as_draft=body.as_draft,
             )
         )
     )

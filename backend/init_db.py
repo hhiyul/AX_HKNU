@@ -10,8 +10,12 @@
 """
 import os
 import sys
+from datetime import datetime, timezone
 
 from pymongo import ASCENDING, DESCENDING, MongoClient
+from pymongo.errors import BulkWriteError
+
+DUPLICATE_KEY = 11000
 
 DEFAULT_DB_NAME = "ax_platform"
 
@@ -19,6 +23,8 @@ STRING_LIST = {"bsonType": "array", "items": {"bsonType": "string"}}
 TIMESTAMPS = {"created_at": "date", "updated_at": "date"}
 # 프로젝트에 딸린 자료가 공통으로 갖는 필드
 OWNED = {"user_id": "objectId", "project_id": "objectId"}
+# 상품기획 6개 항목. app/services/items.py의 PLAN_LABELS와 같아야 한다.
+PLAN_KEYS = ["ck_01", "ck_02", "ck_03", "ck_04", "ck_05", "ck_06"]
 
 
 def enum(*values):
@@ -159,14 +165,15 @@ COLLECTIONS = {
     "ai_jobs": build_schema(
         required={
             "user_id": "objectId",
-            "brand_id": "objectId",
-            # 설계안에 "등"으로 열려 있어 값 목록은 검사하지 않음
-            "job_type": "string",
+            # 작업이 다루는 기획 항목
+            "job_type": enum(*PLAN_KEYS),
             "input": "object",
             "status": enum("queued", "running", "succeeded", "failed"),
             **TIMESTAMPS,
         },
         optional={
+            # 브랜드 없는 프로젝트의 작업도 있다.
+            "brand_id": ["objectId"],
             "project_id": ["objectId"],
             "result": ["object"],
             "error_message": ["string"],
@@ -194,6 +201,7 @@ INDEXES = {
     "ai_jobs": [
         ([("user_id", ASCENDING), ("created_at", DESCENDING)], {}),
         ([("brand_id", ASCENDING), ("created_at", DESCENDING)], {}),
+        ([("project_id", ASCENDING)], {}),
     ],
     "items": [
         ([("project_id", ASCENDING), ("kind", ASCENDING), ("key", ASCENDING)], UNIQUE),
@@ -206,6 +214,41 @@ INDEXES = {
         ([("created_at", ASCENDING)], {"expireAfterSeconds": 7 * 24 * 60 * 60}),
     ],
 }
+
+
+def fill_plan(db):
+    """기획 항목 문서가 6개보다 적은 프로젝트에 빠진 항목을 건너뜀(빈 내용)으로 채운다."""
+    added = 0
+    now = datetime.now(timezone.utc)
+    for project in db.projects.find({}, {"user_id": 1, "created_at": 1, "updated_at": 1}):
+        if project.get("user_id") is None:
+            continue
+        ident = {"project_id": project["_id"], "kind": "plan"}
+        existing = {document["key"] for document in db["items"].find(ident, {"key": 1})}
+        missing = [
+            {
+                **ident,
+                "user_id": project["user_id"],
+                "key": key,
+                "content": "",
+                "amount": None,
+                "revision": 1,
+                "created_at": project.get("created_at") or now,
+                "updated_at": project.get("updated_at") or now,
+            }
+            for key in PLAN_KEYS
+            if key not in existing
+        ]
+        if not missing:
+            continue
+        try:
+            added += len(db["items"].insert_many(missing, ordered=False).inserted_ids)
+        except BulkWriteError as error:
+            # 실행 중인 서버가 그 사이 같은 항목을 만들었으면 그 항목만 넘어간다.
+            if any(fault["code"] != DUPLICATE_KEY for fault in error.details["writeErrors"]):
+                raise
+            added += error.details["nInserted"]
+    return added
 
 
 def migrate(db):
@@ -231,7 +274,7 @@ def migrate(db):
                 {"project_id": project["_id"], "kind": "plan", "content": {"$nin": ["", None]}}
             )
             moved += db.projects.update_one({"_id": project["_id"]}, {"$set": {"plan_filled": filled}}).modified_count
-    return moved
+    return moved + fill_plan(db)
 
 
 def apply_collection(db, name, schema):
