@@ -1,0 +1,4 @@
+# Additions for the isolated P5 prototype; install requirements.txt separately.
+python-docx==1.2.0
+reportlab==5.1.0
+Markdown==3.11.3

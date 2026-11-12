@@ -1,0 +1,16 @@
+{"op": "ready", "model": "gpt-6-luna", "storage": "synthetic"}
+{"op": "count", "digest": "4fbb9a5b8bb9e3d595c4ec291edf02b6b67814cfeae032f1ae3d0397bc987fd8", "input_tokens": 65726}
+{"op": "count", "digest": "1a5e1305e39e9486aff7b67fa3b0a6be5f64deb2c8048c28a498dd93318945a5", "input_tokens": 13}
+{"op": "count", "digest": "5ef28b3b6580e645bd3e4575e5046fceb9c22d54242e4e2fb726c7f7b80a8843", "input_tokens": 19}
+{"op": "summary_start", "messages": 1, "roles": ["user"]}
+{"op": "count", "digest": "82513efe4f4b8bdccb3cb9bb6c935e5b3b3064eb33f3e7c5753400a580040bd0", "input_tokens": 65099}
+{"op": "summary_completed"}
+{"op": "count", "digest": "7de46c81f8e3574e3d05aaf2dd2cf3fd9c160262e56bf26098ac72fe44cbd38f", "input_tokens": 750}
+{"op": "stream_start", "digest": "7de46c81f8e3574e3d05aaf2dd2cf3fd9c160262e56bf26098ac72fe44cbd38f"}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "stream_usage", "digest": "7de46c81f8e3574e3d05aaf2dd2cf3fd9c160262e56bf26098ac72fe44cbd38f", "input_tokens": 750, "output_tokens": 42, "total_tokens": 792}
+{"op": "stream_completed", "digest": "7de46c81f8e3574e3d05aaf2dd2cf3fd9c160262e56bf26098ac72fe44cbd38f", "deltas": 0, "seconds": 1.625}
+{"op": "count", "digest": "995184fc047822b6ad162638a50ebbdfb0b0d877ab149e868ff5c2fc0e127316", "input_tokens": 991}
+{"op": "stream_start", "digest": "995184fc047822b6ad162638a50ebbdfb0b0d877ab149e868ff5c2fc0e127316"}
+{"op": "stream_usage", "digest": "995184fc047822b6ad162638a50ebbdfb0b0d877ab149e868ff5c2fc0e127316", "input_tokens": 991, "output_tokens": 69, "total_tokens": 1060}
+{"op": "stream_completed", "digest": "995184fc047822b6ad162638a50ebbdfb0b0d877ab149e868ff5c2fc0e127316", "deltas": 65, "seconds": 1.766}

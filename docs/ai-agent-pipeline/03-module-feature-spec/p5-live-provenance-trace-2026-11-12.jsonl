@@ -1,0 +1,23 @@
+{"op": "ready", "model": "gpt-6-luna", "projects": 2}
+{"op": "count", "input_tokens": 65722, "seconds": 1.547, "digest": "9f2e9de83c49947b6b1d4536e446e6738b0511204a8cf5e3297d0a9d625c57f3", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 1, "tool_outputs": 0}
+{"op": "count", "input_tokens": 11, "seconds": 0.5, "digest": "aa808e665a7d6d3197791eda8bf4ab47f32ebc2db31e5ab65caac6a5748fb69b", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 0, "tool_outputs": 0}
+{"op": "summary_start", "message_count": 1, "roles": ["user"]}
+{"op": "count", "input_tokens": 65107, "seconds": 1.625, "digest": "fd5245192d99d4dd1b43f61f7466426725b288554d552111b4d5397c39ce0917", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 1, "tool_outputs": 0}
+{"op": "summary_completed", "chars": 108, "seconds": 5.078}
+{"op": "count", "input_tokens": 744, "seconds": 0.563, "digest": "600ff7b3fbbcaf05c0d8cc17f08ec3f4ce21d26e7dc3b7d376bea0d0dce6fc7b", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 0}
+{"op": "stream_start", "digest": "600ff7b3fbbcaf05c0d8cc17f08ec3f4ce21d26e7dc3b7d376bea0d0dce6fc7b", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 0}
+{"op": "stream_end", "digest": "600ff7b3fbbcaf05c0d8cc17f08ec3f4ce21d26e7dc3b7d376bea0d0dce6fc7b", "completed": true, "delta_count": 0, "tools": ["read_project_sections"], "seconds": 1.469, "first_delta_seconds": null, "delta_span_seconds": null}
+{"op": "count", "input_tokens": 985, "seconds": 0.5, "digest": "86e38df67241781c3a3631b30891998c7748ff0c575474e2efb77f60ef751b79", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 1}
+{"op": "stream_start", "digest": "86e38df67241781c3a3631b30891998c7748ff0c575474e2efb77f60ef751b79", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 1}
+{"op": "stream_end", "digest": "86e38df67241781c3a3631b30891998c7748ff0c575474e2efb77f60ef751b79", "completed": true, "delta_count": 41, "tools": [], "seconds": 1.546, "first_delta_seconds": 1.0, "delta_span_seconds": 0.39}
+{"op": "count", "input_tokens": 65714, "seconds": 0.5, "digest": "9c927987631ef9ef50eab14ba8541eed9cd5bcc83a407d49741849cbe60b790b", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 1, "tool_outputs": 0}
+{"op": "count", "input_tokens": 11, "seconds": 0.468, "digest": "aa808e665a7d6d3197791eda8bf4ab47f32ebc2db31e5ab65caac6a5748fb69b", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 0, "tool_outputs": 0}
+{"op": "summary_start", "message_count": 1, "roles": ["user"]}
+{"op": "count", "input_tokens": 65107, "seconds": 0.484, "digest": "fd5245192d99d4dd1b43f61f7466426725b288554d552111b4d5397c39ce0917", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 1, "tool_outputs": 0}
+{"op": "summary_completed", "chars": 88, "seconds": 3.094}
+{"op": "count", "input_tokens": 728, "seconds": 0.485, "digest": "c0e7e94344bf79065c7f38bb4828362763ceff34c7f1b5526b696fd615becc04", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 0}
+{"op": "stream_start", "digest": "c0e7e94344bf79065c7f38bb4828362763ceff34c7f1b5526b696fd615becc04", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 0}
+{"op": "stream_end", "digest": "c0e7e94344bf79065c7f38bb4828362763ceff34c7f1b5526b696fd615becc04", "completed": true, "delta_count": 0, "tools": ["read_project_sections"], "seconds": 1.656, "first_delta_seconds": null, "delta_span_seconds": null}
+{"op": "count", "input_tokens": 977, "seconds": 0.5, "digest": "a4faaeb255a4237d9b8aa2fccf2eec94a960d213e450b3b8355a9a038b7e4eba", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 1}
+{"op": "stream_start", "digest": "a4faaeb255a4237d9b8aa2fccf2eec94a960d213e450b3b8355a9a038b7e4eba", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 1}
+{"op": "stream_end", "digest": "a4faaeb255a4237d9b8aa2fccf2eec94a960d213e450b3b8355a9a038b7e4eba", "completed": true, "delta_count": 118, "tools": [], "seconds": 2.063, "first_delta_seconds": 0.86, "delta_span_seconds": 1.062}

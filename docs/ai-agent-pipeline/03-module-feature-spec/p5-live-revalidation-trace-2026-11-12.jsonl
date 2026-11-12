@@ -1,0 +1,12 @@
+{"op": "ready", "model": "gpt-6-luna", "projects": 2}
+{"op": "count", "input_tokens": 65511, "seconds": 0.954, "digest": "6695c93117d25750161d1f62cfac16592900b57ea2fd3a7d0037f4f48ba225aa", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 1, "tool_outputs": 0}
+{"op": "count", "input_tokens": 11, "seconds": 0.843, "digest": "aa808e665a7d6d3197791eda8bf4ab47f32ebc2db31e5ab65caac6a5748fb69b", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 0, "tool_outputs": 0}
+{"op": "summary_start", "message_count": 1, "roles": ["user"]}
+{"op": "count", "input_tokens": 65107, "seconds": 0.516, "digest": "fd5245192d99d4dd1b43f61f7466426725b288554d552111b4d5397c39ce0917", "model": "gpt-6-luna", "history_summary_labels": 0, "long_input_items": 1, "tool_outputs": 0}
+{"op": "summary_completed", "chars": 114, "seconds": 3.032}
+{"op": "count", "input_tokens": 540, "seconds": 0.5, "digest": "20aa7db4d61290675ba525f40be2a1fb7484e590dbbc03b3590cfcadc619da52", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 0}
+{"op": "stream_start", "digest": "20aa7db4d61290675ba525f40be2a1fb7484e590dbbc03b3590cfcadc619da52", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 0}
+{"op": "stream_end", "digest": "20aa7db4d61290675ba525f40be2a1fb7484e590dbbc03b3590cfcadc619da52", "completed": true, "delta_count": 0, "tools": ["read_project_sections"], "seconds": 1.688, "first_delta_seconds": null, "delta_span_seconds": null}
+{"op": "count", "input_tokens": 781, "seconds": 0.578, "digest": "ef4ec1cd9e9389f5319e16cc72df0f76be1d641366143ea6c7546822b7b1b8ee", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 1}
+{"op": "stream_start", "digest": "ef4ec1cd9e9389f5319e16cc72df0f76be1d641366143ea6c7546822b7b1b8ee", "model": "gpt-6-luna", "history_summary_labels": 1, "long_input_items": 0, "tool_outputs": 1}
+{"op": "stream_end", "digest": "ef4ec1cd9e9389f5319e16cc72df0f76be1d641366143ea6c7546822b7b1b8ee", "completed": true, "delta_count": 23, "tools": [], "seconds": 1.954, "first_delta_seconds": 1.422, "delta_span_seconds": 0.407}
