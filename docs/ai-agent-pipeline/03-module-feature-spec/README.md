@@ -6,6 +6,7 @@
 
 - [04 기획 산출물 모듈 명세](planning-output-module-spec.md): 03 라우팅과 04 실행·문서·출력 owner 계약.
 - [03·04 구현 준비 계약과 blocker](implementation-readiness-contracts.md): 내부 포트 설계, 현재 소스와의 차이, 공동 owner 제공물·시험 계획.
+- [OpenAI 백엔드 송수신 구현 계획](openai-backend-implementation-plan.md): 체리픽 후 기준선, DB 없는 단위시험과 opt-in 실연결 시험, 실제 제품 통합 전 차이.
 
 ## 문서 목록
 

@@ -2,6 +2,8 @@
 
 기준: 2026-11-12 로컬 `feature/ai-agent-pipeline` HEAD `c35f32ed9b3b46323d09f548d4257d13b6a846f7`의 소스와 명세, Q1~20 및 GD-001~040. 이 문서는 구현 전 설계·검토 기록입니다. [03 모듈 정본](ai-pipeline-module-feature-spec-v0.1.md), [04 모듈](planning-output-module-spec.md), [04 사용자 정본](../02-user-feature-spec/planning-output-user-spec.md), [결정표](grill-feature-decisions.md)를 함께 읽습니다. 현재 코드를 운영 배포본이나 팀원의 제공 약속으로 간주하지 않습니다.
 
+**2026-11-12 후속 기준선:** 아래 1절 소스 관찰과 B 항목은 `c35f32e` 시점의 이력입니다. 이후 체리픽된 백엔드에는 CK별 revision·조건부 저장, projection 및 document CRUD 등이 추가되어 “존재하지 않음”을 현행으로 읽으면 안 됩니다. 현행 코드와 사용자 계약 간 차이 및 Provider 우선 구현 순서는 [OpenAI 백엔드 송수신 구현 계획](openai-backend-implementation-plan.md#6-새-백엔드와-제품-계약의-차이-후속-통합-blocker)을 따릅니다. 각 보장의 실제 검증 상태는 그 문서에서 따로 확인합니다.
+
 ## 1. 판정과 현재 소스 증거
 
 **DESIGNED**는 이 문서에서 내부 인터페이스와 기대 결과를 설계한 것이고 구현·통합의 성공이 아닙니다. **EXACT_OPEN**은 내부 설계 또는 매핑이 미결, **PRODUCT_OPEN**은 사용자 결과나 승인 범위가 미결, **UPSTREAM_BLOCKED**는 다른 owner의 실제 제공·원자성·운영 약속이 필요한 상태입니다. 하나의 기능은 내부 설계가 되어도 외부 경계에서 막힐 수 있습니다. 시험·구현·실제 서비스 검증은 NOT_RUN입니다.
