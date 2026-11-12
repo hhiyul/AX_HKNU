@@ -5,6 +5,7 @@
 **현재 상태: 2026-11-06 M-01/06 상세 계약·발송 전 검증 보완 / 공통 API·일부 어댑터 OPEN / 구현·테스트 NOT_RUN.** 사용자 기능명세 v0.2의 D-UF-109로 MVP 대화·압축 모델은 OpenAI `gpt-6-luna`로 지정됐습니다. Python 3.11과 팀원 API를 호출하는 Python 어댑터 경계는 이번 사용자 확인입니다. 자료 획득→허용 컨텍스트→Responses payload·파싱·압축/예산, 자산 바이트·계수/발송 일치·실패 상태와 시험 기대값을 구체화했습니다. 제품 보류와 공동 계약은 필요한 경로별로 먼저 확인합니다.
 
 - [04 기획 산출물 모듈 명세](planning-output-module-spec.md): 03 라우팅과 04 실행·문서·출력 owner 계약.
+- [03·04 구현 준비 계약과 blocker](implementation-readiness-contracts.md): 내부 포트 설계, 현재 소스와의 차이, 공동 owner 제공물·시험 계획.
 
 ## 문서 목록
 
