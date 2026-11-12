@@ -59,10 +59,9 @@ async def create_project(db: AsyncDatabase, user_id: ObjectId, body: ProjectCrea
         "updated_at": now,
     }
     await db.projects.insert_one(project)
-    if body.plan is not None:
-        # 마법사를 거친 프로젝트는 답하지 않은 문항이 "건너뜀"으로 남는다.
-        answers = {answer.key: answer for answer in body.plan}
-        project["plan_filled"] = await items.start_plan(db, user_id, project["_id"], answers)
+    # 기획 6개 항목은 늘 함께 만든다. 마법사에서 답하지 않았거나 마법사를 거치지 않은 항목은 "건너뜀"이다.
+    answers = {answer.key: answer for answer in body.plan or []}
+    project["plan_filled"] = await items.start_plan(db, user_id, project["_id"], answers)
     return view(project)
 
 

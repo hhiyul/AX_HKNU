@@ -111,7 +111,7 @@ async def test_archive_trash_and_restore(client, login):
     kept = await create_project(client, "진행 중")
     project = await create_project(client, "정리할 프로젝트")
     url = f"/projects/{project['id']}"
-    await client.put(f"{url}/items/plan/ck_01", json={"content": "칠보 팔찌", "revision": 0})
+    await client.put(f"{url}/items/plan/ck_01", json={"content": "칠보 팔찌", "revision": 1})
 
     archived = (await client.patch(url, json={"status": "archived", "revision": 1})).json()
     assert archived["status"] == "archived" and archived["archived_at"]
@@ -157,7 +157,7 @@ async def test_permanent_delete_removes_everything_under_it(client, login, db):
     project = await create_project(client)
     other = await create_project(client, "다른 프로젝트")
     url = f"/projects/{project['id']}"
-    await client.put(f"{url}/items/plan/ck_01", json={"content": "칠보 팔찌", "revision": 0})
+    await client.put(f"{url}/items/plan/ck_01", json={"content": "칠보 팔찌", "revision": 1})
     await client.post(f"{url}/items/record", json={"title": "정리", "content": "내용"})
     await client.post(f"{url}/items/document", json={"title": "기획서", "content": "본문"})
     await client.put(f"{url}/economics", json={"cost": {"material": 3000}, "revision": 0})
@@ -172,9 +172,13 @@ async def test_permanent_delete_removes_everything_under_it(client, login, db):
     assert res.status_code == 409 and res.json()["code"] == "NOT_IN_TRASH"
     assert (await client.delete(url)).status_code == 204
     # 휴지통에 있는 동안에는 자료가 그대로다.
-    assert await db["items"].count_documents({}) == 3
+    mine = {"project_id": ObjectId(project["id"])}
+    # 기획 6개 항목 + 정리 내용 + 산출물
+    assert await db["items"].count_documents(mine) == 8
     assert (await client.delete(url, params={"permanent": "true"})).status_code == 204
     for name in ("items", "cost_sheets", "messages"):
-        assert await db[name].count_documents({}) == 0, name
+        assert await db[name].count_documents(mine) == 0, name
+    # 다른 프로젝트의 기획 항목은 남는다.
+    assert await db["items"].count_documents({}) == 6
     assert (await client.get(other_url)).json()["chip_refs"] == []
     assert (await client.get(url)).status_code == 404

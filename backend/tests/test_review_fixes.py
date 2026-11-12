@@ -25,7 +25,7 @@ async def insert_job(db, user_id, brand_id, status, project_id=None):
             "user_id": ObjectId(user_id),
             "brand_id": ObjectId(brand_id),
             "project_id": ObjectId(project_id) if project_id else None,
-            "job_type": "logo",
+            "job_type": "ck_01",
             "input": {},
             "status": status,
             "created_at": now,

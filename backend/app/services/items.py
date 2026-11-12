@@ -1,6 +1,6 @@
 """프로젝트에 저장하는 글. 종류(kind)는 세 가지다.
 
-  - plan      상품기획 6개 항목(ck_01~ck_06). 저장한 적이 없어도 미작성 상태로 조회된다.
+  - plan      상품기획 6개 항목(ck_01~ck_06). 프로젝트를 만들 때 6개가 함께 생기고, 내용이 없으면 건너뜀이다.
   - record    AI와 함께 정리한 내용. AI 답변을 검수해서 저장한다.
   - document  산출물(제목 + 본문). 편집 중인 내용은 임시 저장(draft)으로 따로 둔다.
 
@@ -52,21 +52,18 @@ def check_plan_answer(key: str, content: str, amount: int | None) -> None:
 def view(kind: str, key: str, document: dict | None) -> dict:
     document = document or {}
     content = document.get("content") or None
-    if kind != "plan" or content:
-        state = "WRITTEN"
-    else:
-        state = "SKIPPED" if document.get("skipped") else "UNSET"
+    state = "WRITTEN" if kind != "plan" or content else "SKIPPED"
     return {
         "kind": kind,
         "key": key,
         "title": PLAN_LABELS[key] if kind == "plan" else document.get("title"),
-        # 기획 항목만 미작성(UNSET)·건너뜀(SKIPPED)이 있다.
+        # 기획 항목은 내용이 없으면 건너뜀(SKIPPED)이다. 화면에는 "미작성"으로 보인다.
         "state": state,
         "content": content,
         "amount": document.get("amount"),
         "message_id": document.get("message_id"),
         "draft": document.get("draft") if kind == "document" else None,
-        # 아직 한 번도 저장하지 않은 기획 항목은 0
+        # 6개를 함께 만들기 전의 프로젝트는 문서가 없을 수 있다. 그때는 0
         "revision": document.get("revision", 0),
         "updated_at": document.get("updated_at"),
     }
@@ -83,7 +80,7 @@ async def _plan_filled(db: AsyncDatabase, project_id: ObjectId) -> int:
 
 
 async def start_plan(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId, answers: dict) -> int:
-    """새 프로젝트 마법사의 답변으로 6개 항목을 만든다. 답하지 않은 항목은 건너뜀으로 남는다. 작성한 개수를 돌려준다."""
+    """새 프로젝트의 6개 항목을 만든다. 마법사에서 답하지 않은 항목은 건너뜀으로 남는다. 작성한 개수를 돌려준다."""
     now = utcnow()
     documents = []
     for key in PLAN_LABELS:
@@ -98,7 +95,6 @@ async def start_plan(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId,
                 "key": key,
                 "content": content,
                 "amount": Int64(amount) if amount is not None else None,
-                "skipped": not content,
                 "revision": 1,
                 "created_at": now,
                 "updated_at": now,
@@ -143,13 +139,12 @@ async def save_item(
     content: str | None = None,
     title: str | None = None,
     amount: int | None = None,
-    skipped: bool = False,
     as_draft: bool = False,
     log: str | None = None,
 ) -> dict:
     """글을 저장한다. content와 title은 보내지 않으면 그대로 둔다.
 
-    기획 항목은 내용을 비워 저장하면 미작성으로 돌아가고(skipped면 건너뜀), 금액은 보내지 않으면 유지한다.
+    기획 항목은 내용을 비워 저장하면 건너뜀으로 돌아가고, 금액은 보내지 않으면 유지한다.
     as_draft는 산출물 편집기의 임시 저장이다. 저장된 문서는 그대로 두고 draft만 바꾼다.
     """
     existing = await _find(db, project_id, kind, key)
@@ -171,11 +166,11 @@ async def save_item(
         if not content.strip():
             if amount is not None:
                 raise invalid("amount")
-            changes = {"content": "", "amount": None, "skipped": skipped}
+            changes = {"content": "", "amount": None}
         else:
             if amount is None:
                 amount = (existing or {}).get("amount")
-            changes = {"content": content, "amount": Int64(amount) if amount is not None else None, "skipped": False}
+            changes = {"content": content, "amount": Int64(amount) if amount is not None else None}
         log = log or f"{PLAN_LABELS[key]} 수정"
     else:
         if amount is not None:
