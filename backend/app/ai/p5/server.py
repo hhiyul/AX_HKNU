@@ -11,10 +11,11 @@ from urllib.parse import quote
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from app.ai.responses import Delivery, ProviderError
 from app.ai.p5.context import Budget, ContextError, MODEL_WINDOW, OUTPUT_RESERVE, SAFETY_RESERVE, THRESHOLD, history_summary_text, prepare
-from app.ai.p5.export import export
+from app.ai.p5.export import ExportError, export
 from app.ai.p5.provider import DemoProvider, OpenAIProvider
 from app.ai.p5.store import Store, StoreError
 from app.ai.p5.usage import UsageTracker, valid_usage
@@ -621,9 +622,11 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
         app.state.store.project(pid, owner)
         doc = app.state.store.document(pid, did)
         try:
-            data, mime = export(doc["body"], fmt)
+            data, mime = await run_in_threadpool(export, doc["body"], fmt)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
+        except ExportError as exc:
+            raise HTTPException(503, str(exc)) from exc
         return Response(data, media_type=mime, headers={"Content-Disposition": f'attachment; filename="document.{fmt}"'})
 
     return app

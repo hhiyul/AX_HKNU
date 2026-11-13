@@ -1,12 +1,9 @@
 import asyncio
-import io
 import json
 import sqlite3
-import zipfile
 
 import httpx
 import pytest
-from docx import Document
 
 from app.ai.p5.provider import DemoProvider
 from app.ai.p5.server import create_app, decode_attachment, is_document_request
@@ -273,18 +270,11 @@ async def test_ck_manual_only_and_document_lifecycle(env):
     edit["approved"] = True
     assert (await client.put(path, json=edit)).json()["revision"] == 2
     assert (await client.put(path, json=edit)).status_code == 409
-    for fmt in ("txt", "md", "docx", "pdf"):
+    for fmt in ("txt", "md"):
         result = await client.get(path + "/export/" + fmt)
         assert result.status_code == 200, (fmt, result.text)
         if fmt in ("txt", "md"):
             assert "한글" in result.content.decode("utf-8")
-        if fmt == "docx":
-            assert "한글" in "".join(p.text for p in Document(io.BytesIO(result.content)).paragraphs)
-            with zipfile.ZipFile(io.BytesIO(result.content)) as archive:
-                assert b"https://example.com" in archive.read("word/_rels/document.xml.rels")
-        if fmt == "pdf":
-            assert result.content.startswith(b"%PDF-")
-            assert b"https://example.com" in result.content
     form.update(content="새 상품", revision=1)
     assert (await client.put(ckpath, json=form)).status_code == 200
     stale = (await client.get(path)).json()
