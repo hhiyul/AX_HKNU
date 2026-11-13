@@ -24,7 +24,7 @@ from app.ai.p5.usage import UsageTracker, valid_usage
 READ_TOOL = {"type": "function", "name": "read_project_sections", "description": "Read available project planning sections or active attached text already supplied in context. Use keys attachments or files for all active attachments, or an exact attachment ID or name. Attachments not included in this request are unavailable.", "parameters": {"type": "object", "properties": {"keys": {"type": "array", "items": {"type": "string"}}}, "required": ["keys"], "additionalProperties": False}, "strict": True}
 SEARCH_TOOL = {"type": "function", "name": "web_search", "description": "Search the web using only the user-supplied public search terms", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False}, "strict": True}
 GENERAL_SEARCH_TOOL = {"type": "function", "name": "web_search_generalized", "description": "Search public information using only broad generic concepts from the enum. Select one to four concepts relevant to the request. Never include a private name, number, source text, or free-form query. If the available concepts cannot represent the request, ask the user for explicit public search terms instead.", "parameters": {"type": "object", "properties": {"concepts": {"type": "array", "items": {"type": "string", "enum": list(GENERAL_CONCEPTS)}, "minItems": 1, "maxItems": 4}}, "required": ["concepts"], "additionalProperties": False}, "strict": True}
-ROUTE_TOOL = {"type": "function", "name": "route_document", "description": "Route a user's request for a new standalone document to the document generator; do not call for general discussion or checklist edits.", "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}, "strict": True}
+ROUTE_TOOL = {"type": "function", "name": "route_document", "description": "Route only when the user requests creating a new standalone document or deliverable. Do not route a request merely to search, find, investigate, cite, summarize, answer in chat, or edit a checklist. A request to search and create a document may be routed.", "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}, "strict": True}
 RECORD_TOOL = {"type": "function", "name": "propose_record", "description": "Prepare a reviewable additional-record proposal only when the user asks to save or record a discussion. This does not save anything. Never use it to change a checklist or a 04 document.", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "body": {"type": "string"}}, "required": ["title", "body"], "additionalProperties": False}, "strict": True}
 
 
@@ -97,10 +97,23 @@ class RecordIn(BaseModel):
     approved: bool = False
 
 
+_ARTIFACT = r"(?:문서|기획서|계획서|보고서|제안서|상세\s*페이지|소개\s*자료|발표\s*자료|정리본|document|report|proposal)"
+_CREATE = r"(?:작성(?!자|\s*(?:법|방법|요령|가이드|하지\s*말))|만들(?!지\s*말)|생성(?!하지\s*말)|제작(?!하지\s*말)|써\s*(?!주지\s*말)|create|write|draft)"
+
+
+def has_document_creation_intent(text: str) -> bool:
+    """Recognize explicit deliverable creation without equating research with creation."""
+    return bool(re.search(rf"{_ARTIFACT}.{{0,30}}{_CREATE}|{_CREATE}.{{0,30}}{_ARTIFACT}|{_ARTIFACT}\s*(?:로|형태로|형식으로)\s*정리", text, re.IGNORECASE))
+
+
 def is_document_request(text: str) -> bool:
     if re.search(r"추가\s*기록", text) and not re.search(r"사업계획서|상품기획서|상세페이지", text):
         return False
-    return bool(re.search(r"(문서|기획서|사업계획서|상세페이지).{0,30}(작성|만들|생성|써)", text))
+    return has_document_creation_intent(text) and bool(re.search(r"문서|기획서|계획서|상세\s*페이지", text))
+
+
+def is_search_only_request(text: str) -> bool:
+    return bool(re.search(r"검색|찾아|조사|\bsearch\b|\blook\s+up\b", text, re.IGNORECASE)) and not has_document_creation_intent(text)
 
 
 def create_app(store: Store | None = None, provider=None) -> FastAPI:
@@ -356,7 +369,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             tools = [READ_TOOL]
             if not document_mode:
                 tools.append(RECORD_TOOL)
-            if request.mode == "auto" and not document_mode:
+            search_only = request.mode == "auto" and is_search_only_request(request.text)
+            if request.mode == "auto" and not document_mode and not search_only:
                 tools.append(ROUTE_TOOL)
             if request.search_allowed and hasattr(underlying_provider, "web_search"):
                 tools.append(GENERAL_SEARCH_TOOL)
@@ -400,6 +414,16 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                             raise ValueError
                     except (TypeError, ValueError):
                         raise ContextError("INVALID_TOOL_ARGUMENTS") from None
+                    if search_only:
+                        # Defend even if a provider emits an unadvertised call.
+                        tail.extend([
+                            {"type": "function_call", "name": "route_document", "call_id": tool_calls[0]["call_id"], "arguments": tool_calls[0].get("arguments") or "{}"},
+                            {"type": "function_call_output", "call_id": tool_calls[0]["call_id"], "output": json.dumps({"error": "DOCUMENT_ROUTE_NOT_REQUESTED", "message": "검색 요청에 문서 생성은 요청되지 않았습니다. 대화로 답하세요."}, ensure_ascii=False)},
+                        ])
+                        prepared = await prepare(provider, selected, history, current_text, tools, emit, budget, save_capsule, False, tail, observe_count)
+                        wire = prepared.wire
+                        history = apply_prepared_history(history, prepared)
+                        continue
                     document_mode = True
                     selected = [x for x in snapshot if x["type"] != "ck" or x["state"] == "DECIDED" or (x["state"] == "DRAFT" and x["key"] in request.include_draft)]
                     manifest = [{"type": "project", "id": pid, "revision": None}]

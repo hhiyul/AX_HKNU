@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from app.ai.p5.provider import DemoProvider
-from app.ai.p5.server import create_app, decode_attachment, is_document_request
+from app.ai.p5.server import create_app, decode_attachment, is_document_request, is_search_only_request
 from app.ai.p5.store import Store
 from app.ai.p5.usage import SearchResult, SummaryText
 from app.ai.responses import Delivery, ProviderError
@@ -453,6 +453,68 @@ async def test_model_routes_non_keyword_document_request_with_explicit_scope(env
     assert "SESSION_PRIVATE_456" in str(provider.wires[0])
     assert "SESSION_PRIVATE_456" not in str(provider.wires[1])
     assert any(e["kind"] == "document_candidate" for e in (await client.get(base + "/events")).json())
+
+
+@pytest.mark.parametrize(('text', 'expected'), [
+    ('웹 검색으로 최신 텀블러 시장 사례를 다시 찾아 출처를 알려 주세요.', True),
+    ('기획서 작성법을 검색해 알려 주세요.', True),
+    ('보고서 작성 방법을 검색해 알려 주세요.', True),
+    ('사업계획서 작성하지 말고 웹 검색해 주세요.', True),
+    ('문서를 만들지 말고 관련 자료를 찾아 주세요.', True),
+    ('Search for examples and cite sources.', True),
+    ('웹 검색을 바탕으로 사업계획서를 작성해 줘.', False),
+    ('검색해서 팔찌 소개 자료를 만들어 주세요.', False),
+    ('시장 사례를 조사해 보고서로 정리해 주세요.', False),
+    ('팔찌 소개 자료를 만들어 주세요.', False),
+])
+def test_search_only_routing_boundary(text, expected):
+    assert is_search_only_request(text) is expected
+    if expected:
+        assert not is_document_request(text)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('enabled', [False, True])
+async def test_search_only_excludes_document_route_and_ignores_forged_tool_call(env, enabled):
+    app, db, client = env
+    class MisroutingProvider(DemoProvider):
+        def __init__(self): self.wires = []
+        async def stream(self, wire):
+            self.wires.append(json.loads(json.dumps(wire)))
+            if len(self.wires) == 1:
+                yield {'type': 'tool', 'name': 'route_document', 'call_id': 'bad-route', 'arguments': '{}'}
+            else:
+                yield {'type': 'delta', 'text': '검색 요청에 대한 대화 답변입니다.'}
+            yield {'type': 'completed'}
+    provider = MisroutingProvider(); app.state.provider = provider
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    rid = await start_and_wait(app, client, sid, {'text': '웹 검색으로 최신 텀블러 시장 사례를 다시 찾아 출처를 알려 주세요.', 'mode': 'auto', 'search_allowed': enabled})
+    assert len(provider.wires) == 2
+    assert all(not any(tool['name'] == 'route_document' for tool in wire['tools']) for wire in provider.wires)
+    assert 'DOCUMENT_ROUTE_NOT_REQUESTED' in json.dumps(provider.wires[1])
+    events = db.all('SELECT kind FROM events WHERE run_id=?', (rid,))
+    assert not any(e['kind'] in ('document_route', 'document_candidate') for e in events)
+    assert db.one('SELECT status FROM runs WHERE id=?', (rid,))['status'] == 'completed'
+    assert not db.all('SELECT id FROM candidates')
+
+
+@pytest.mark.asyncio
+async def test_search_and_deliverable_creation_can_still_route(env):
+    app, db, client = env
+    class RoutingProvider(DemoProvider):
+        def __init__(self): self.wires = []
+        async def stream(self, wire):
+            self.wires.append(wire)
+            if len(self.wires) == 1:
+                yield {'type':'tool', 'name':'route_document', 'call_id':'route', 'arguments':'{}'}
+            else:
+                yield {'type':'delta', 'text':'# 소개 자료'}
+            yield {'type':'completed'}
+    provider = RoutingProvider(); app.state.provider = provider
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    rid = await start_and_wait(app, client, sid, {'text':'웹 검색해서 팔찌 소개 자료를 만들어 주세요.', 'mode':'auto', 'search_allowed':True})
+    assert any(t['name'] == 'route_document' for t in provider.wires[0]['tools'])
+    assert any(e['kind'] == 'document_candidate' for e in db.all('SELECT kind FROM events WHERE run_id=?', (rid,)))
 
 
 @pytest.mark.asyncio

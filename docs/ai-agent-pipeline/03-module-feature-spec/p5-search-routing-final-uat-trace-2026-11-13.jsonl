@@ -1,0 +1,24 @@
+{"op": "ready", "model": "gpt-6-luna", "storage": "synthetic"}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record"]}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "generation_usage", "input_tokens": 805, "output_tokens": 22, "total_tokens": 827}
+{"op": "stream_end", "delta_events": 0}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record"]}
+{"op": "generation_usage", "input_tokens": 840, "output_tokens": 72, "total_tokens": 912}
+{"op": "stream_end", "delta_events": 67}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "web_search_generalized"]}
+{"op": "tool", "name": "web_search_generalized"}
+{"op": "generation_usage", "input_tokens": 1096, "output_tokens": 31, "total_tokens": 1127}
+{"op": "stream_end", "delta_events": 0}
+{"op": "search_start"}
+{"op": "search_returned", "url_count": 6, "usage": {"input_tokens": 29797, "output_tokens": 2881, "total_tokens": 32678}}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "web_search_generalized"]}
+{"op": "generation_usage", "input_tokens": 4111, "output_tokens": 1015, "total_tokens": 5126}
+{"op": "stream_end", "delta_events": 988}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "route_document"]}
+{"op": "tool", "name": "route_document"}
+{"op": "generation_usage", "input_tokens": 1996, "output_tokens": 14, "total_tokens": 2010}
+{"op": "stream_end", "delta_events": 0}
+{"op": "generation_start", "tools": ["read_project_sections"]}
+{"op": "generation_usage", "input_tokens": 602, "output_tokens": 180, "total_tokens": 782}
+{"op": "stream_end", "delta_events": 169}
