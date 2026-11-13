@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import AsyncIterator
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -11,6 +12,37 @@ from app.ai.responses import Delivery, ProviderError, parse_response
 from app.ai.p5.usage import SearchResult, SummaryText, valid_usage
 
 BASE = "https://api.openai.com/v1/responses"
+
+
+def _search_text_with_citations(text: str, annotations) -> tuple[str, list[str]]:
+    """Keep provider citation locations, without treating arbitrary text as a URL."""
+    inserts, urls, unplaced = [], [], []
+    for ann in annotations if isinstance(annotations, list) else []:
+        if not isinstance(ann, dict) or ann.get('type') != 'url_citation':
+            continue
+        url = ann.get('url')
+        if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() or ord(c) < 32 for c in url):
+            continue
+        try:
+            parsed = urlsplit(url)
+            if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password:
+                continue
+        except ValueError:
+            continue
+        title = ann.get('title') if isinstance(ann.get('title'), str) else '출처'
+        title = title.replace('[', '').replace(']', '').replace('\n', ' ')[:200] or '출처'
+        urls.append(url)
+        marker = f' [{title}]({url})'
+        start, end = ann.get('start_index'), ann.get('end_index')
+        if type(start) is int and type(end) is int and 0 <= start < end <= len(text):
+            inserts.append((end, marker))
+        else:
+            unplaced.append(marker.strip())
+    for end, marker in sorted(inserts, key=lambda item: item[0], reverse=True):
+        text = text[:end] + marker + text[end:]
+    if unplaced:
+        text += '\n\n위치가 확인되지 않은 출처: ' + ', '.join(unplaced)
+    return text, list(dict.fromkeys(urls))
 
 
 class OpenAIProvider:
@@ -127,10 +159,14 @@ class OpenAIProvider:
         wire = {"model": "gpt-6-luna", "input": [{"role": "user", "content": query}], "tools": [{"type": "web_search"}]}
         if await self.count(wire) + 16_000 > 1_050_000:
             raise ProviderError("MODEL_LIMIT_EXCEEDED", Delivery.NOT_DISPATCHED)
-        data = await self._post(BASE, {**wire, "store": False, "max_output_tokens": 8000})
+        data = await self._post(BASE, {**wire, "store": False, "max_output_tokens": 8000, "tool_choice": "required"})
         if data.get("status") != "completed" or data.get("model") != "gpt-6-luna" or not isinstance(data.get("output"), list):
             exc = ProviderError("INVALID_RESPONSE", Delivery.RESPONDED)
             exc.usage = valid_usage(data.get("usage"))
+            raise exc
+        if not any(isinstance(item, dict) and item.get('type') == 'web_search_call' and item.get('status') == 'completed' and isinstance(item.get('action'), dict) and item['action'].get('type') == 'search' for item in data['output']):
+            exc = ProviderError('SEARCH_NOT_PERFORMED', Delivery.RESPONDED)
+            exc.usage = valid_usage(data.get('usage'))
             raise exc
         texts, urls = [], []
         for item in data["output"]:
@@ -138,15 +174,14 @@ class OpenAIProvider:
                 continue
             for part in item.get("content", []):
                 if isinstance(part, dict) and part.get("type") == "output_text" and isinstance(part.get("text"), str):
-                    texts.append(part["text"].replace(self.key, "[REDACTED]"))
-                    for ann in part.get("annotations", []):
-                        if isinstance(ann, dict) and ann.get("type") == "url_citation" and isinstance(ann.get("url"), str):
-                            urls.append(ann["url"])
+                    cited, part_urls = _search_text_with_citations(part['text'], part.get('annotations'))
+                    texts.append(cited.replace(self.key, '[REDACTED]'))
+                    urls.extend(part_urls)
         if not texts:
             exc = ProviderError("EMPTY_OUTPUT", Delivery.RESPONDED)
             exc.usage = valid_usage(data.get("usage"))
             raise exc
-        return SearchResult({"text": "".join(texts), "urls": urls}, data.get("usage"))
+        return SearchResult({"text": "".join(texts), "urls": list(dict.fromkeys(urls))}, data.get("usage"))
 
 
 class DemoProvider:

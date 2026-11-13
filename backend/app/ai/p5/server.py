@@ -408,6 +408,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                 for call in tool_calls:
                     if call.get("name") not in ("read_project_sections", "web_search", "propose_record") or not call.get("call_id"):
                         raise ContextError("TOOL_NOT_ALLOWED")
+                    if call['name'] not in {tool['name'] for tool in tools}:
+                        raise ContextError("TOOL_NOT_ALLOWED")
                     try:
                         args = json.loads(call.get("arguments") or "{}")
                     except (ValueError, KeyError, TypeError):
@@ -434,7 +436,13 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                             raise ContextError("SEARCH_NOT_ALLOWED")
                         if app.state.search_permissions.get(rid, False):
                             await emit("tool_started", "허용한 공개 검색어로 웹을 검색하고 있습니다.")
-                            tool_result = await provider.web_search(" ".join(words))
+                            try:
+                                tool_result = await provider.web_search(" ".join(words))
+                            except ProviderError as exc:
+                                # Unknown delivery is already promoted by GuardedProvider;
+                                # a confirmed failure can be explained without fabricating results.
+                                tool_result = {"error": "SEARCH_FAILED", "message": "웹 검색 결과를 확인하지 못했습니다. 검색하지 않은 사실을 확인된 근거로 사용하지 마세요."}
+                                tools = [t for t in tools if t.get("name") != "web_search"]
                         else:
                             tool_result = {"error": "SEARCH_DISABLED"}
                         if not app.state.search_permissions.get(rid, False):
@@ -442,8 +450,12 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                             tools = [t for t in tools if t.get("name") != "web_search"]
                             selected = [x for x in selected if x.get("type") != "public_search_terms"]
                             await emit("tool_finished", "검색이 꺼져 이후 도착한 결과를 사용하지 않습니다.")
+                        elif tool_result.get("error"):
+                            await emit("tool_finished", "웹 검색을 완료하지 못했습니다. 확인된 검색 근거 없이 답변합니다.")
                         else:
                             await emit("tool_finished", "웹 검색 결과를 확인했습니다.")
+                            if not tool_result.get('urls'):
+                                await emit('tool_finished', '출처 링크가 제공되지 않아 외부 주장을 검증할 수 없습니다.')
                         if isinstance(tool_result, dict) and tool_result.get("text"):
                             urls = [u for u in tool_result.get("urls", []) if isinstance(u, str)]
                             result_text = str(tool_result["text"])

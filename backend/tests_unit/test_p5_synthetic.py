@@ -327,6 +327,39 @@ async def test_autonomous_search_uses_only_approved_public_terms(env):
 
 
 @pytest.mark.asyncio
+async def test_unperformed_search_is_explained_and_never_presented_as_result(env):
+    app, db, client = env
+    class NoSearch(DemoProvider):
+        def __init__(self): self.wires = []; self.searches = 0
+        async def stream(self, wire):
+            self.wires.append(wire)
+            if len(self.wires) == 1:
+                yield {'type':'tool','name':'web_search','call_id':'s1','arguments':'{"query":"public"}'}
+            else:
+                yield {'type':'delta','text':'검색을 확인할 수 없어 검색 결과 없이 답합니다.'}
+            yield {'type':'completed'}
+        async def web_search(self, query):
+            self.searches += 1
+            exc = ProviderError('SEARCH_NOT_PERFORMED', Delivery.RESPONDED)
+            exc.usage = {'input_tokens':20,'output_tokens':5,'total_tokens':25}
+            raise exc
+    provider=NoSearch();app.state.provider=provider
+    sid=(await client.get('/p5/projects/demo/session')).json()['id']
+    base=f'/p5/projects/demo/sessions/{sid}'
+    rid=await start_and_wait(app,client,sid,{'text':'찾아줘','search_allowed':True,'public_search_terms':'public'})
+    events=(await client.get(base+'/events')).json()
+    run=[event for event in events if event['run_id']==rid]
+    assert provider.searches==1 and len(provider.wires)==2
+    assert not any(tool['name']=='web_search' for tool in provider.wires[1]['tools'])
+    assert 'SEARCH_FAILED' in json.dumps(provider.wires[1])
+    assert any('웹 검색을 완료하지 못했습니다' in event['content'] for event in run)
+    assert not any(event['kind']=='tool_result' for event in run)
+    assert any('검색을 확인할 수 없어' in event['content'] for event in run)
+    usage=json.loads([event['content'] for event in run if event['kind']=='run_usage'][-1])
+    assert usage['parts']['web_search']['total_tokens']==25
+
+
+@pytest.mark.asyncio
 async def test_model_routes_non_keyword_document_request_with_explicit_scope(env):
     app, db, client = env
     class RoutingProvider(DemoProvider):

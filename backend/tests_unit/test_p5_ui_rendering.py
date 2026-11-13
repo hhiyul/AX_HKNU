@@ -117,3 +117,30 @@ context.calls=calls;vm.runInNewContext(require('node:fs').readFileSync(0,'utf8')
 """
     completed = subprocess.run([node, '-e', harness], input=script, text=True, encoding='utf-8', capture_output=True, timeout=15)
     assert completed.returncode == 0, completed.stderr
+
+
+def test_search_sources_are_clickable_after_streaming_and_safe():
+    node = shutil.which('node')
+    if not node:
+        pytest.skip('Node.js is needed for the browser renderer regression test')
+    html = (Path(__file__).parents[1] / 'app/ai/p5/ui.html').read_text(encoding='utf-8')
+    script = html.split('<script>', 1)[1].split('</script>', 1)[0]
+    harness = r"""
+const vm=require('node:vm'),elements=new Map();
+function element(tag='div') {return {tag,children:[],textContent:'',className:'',scrollHeight:0,append(...x){this.children.push(...x)},replaceChildren(...x){this.children=x}}}
+const doc={getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement(tag){return element(tag)},createTextNode(text){return {textContent:text}}};
+const context={document:doc,URL,console,process,confirm:()=>true,window:{open(){}},EventSource:class{close(){}},fetch:async()=>new Promise(()=>{})};
+const checks=`
+addEvent('live',{seq:1,kind:'delta',content:'출처 https://exam'});
+addEvent('live',{seq:2,kind:'delta',content:'ple.com/a 및 javascript:alert(1)'});
+addEvent('live',{seq:3,kind:'completed',content:'완료'});
+let answer=$('timeline').children[0];let links=answer.children.filter(x=>x.tag==='a');
+if(links.length!==1||links[0].href!=='https://example.com/a'||links[0].rel!=='noopener noreferrer')throw Error('stream link not safely rendered');
+line('status','출처: [공식 문서](https://example.org/info).');
+let sourceLinks=$('timeline').children[2].children.filter(x=>x.tag==='a');
+if(sourceLinks.length!==1||sourceLinks[0].href!=='https://example.org/info'||sourceLinks[0].textContent!=='공식 문서')throw Error('source link not clickable');
+console.log('safe search link rendering passed');`;
+vm.runInNewContext(require('node:fs').readFileSync(0,'utf8')+'\n'+checks,context);
+"""
+    completed = subprocess.run([node, '-e', harness], input=script, text=True, encoding='utf-8', capture_output=True, timeout=15)
+    assert completed.returncode == 0, completed.stderr
