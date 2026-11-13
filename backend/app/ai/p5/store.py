@@ -44,6 +44,11 @@ class Store:
         for column in ("error_code", "delivery"):
             if column not in columns:
                 self.db.execute(f"ALTER TABLE runs ADD COLUMN {column} TEXT")
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(sessions)")}
+        if 'search_enabled' not in columns:
+            self.db.execute("ALTER TABLE sessions ADD COLUMN search_enabled INTEGER NOT NULL DEFAULT 0")
+        if 'search_epoch' not in columns:
+            self.db.execute("ALTER TABLE sessions ADD COLUMN search_epoch INTEGER NOT NULL DEFAULT 0")
         self.db.commit()
 
     def close(self):
@@ -89,6 +94,17 @@ class Store:
             sid = uid()
             self.db.execute("INSERT INTO sessions(id,project_id,title) VALUES(?,?,?)", (sid, project_id, title))
             return {"id": sid, "title": title, "active_run": None}
+
+    def search_policy(self, project_id, sid, owner):
+        row = self.session(project_id, sid, owner)
+        return {'enabled': bool(row['search_enabled']), 'epoch': row['search_epoch']}
+
+    def set_search_policy(self, project_id, sid, owner, enabled):
+        self.session(project_id, sid, owner)
+        with self.lock, self.db:
+            self.db.execute("UPDATE sessions SET search_enabled=?,search_epoch=search_epoch+1 WHERE id=? AND search_enabled<>?", (int(enabled), sid, int(enabled)))
+            row = self.db.execute("SELECT search_enabled,search_epoch,active_run FROM sessions WHERE id=?", (sid,)).fetchone()
+        return {'enabled': bool(row['search_enabled']), 'epoch': row['search_epoch'], 'active_run': row['active_run']}
 
     def begin_run(self, project_id, sid, owner):
         self.session(project_id, sid, owner)

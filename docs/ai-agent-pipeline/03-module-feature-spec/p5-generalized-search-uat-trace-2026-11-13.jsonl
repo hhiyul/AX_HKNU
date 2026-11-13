@@ -1,0 +1,19 @@
+{"op": "ready", "model": "gpt-6-luna", "storage": "synthetic"}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "route_document", "web_search_generalized"]}
+{"op": "tool", "name": "web_search_generalized"}
+{"op": "generation_usage", "input_tokens": 1070, "output_tokens": 33, "total_tokens": 1103}
+{"op": "search_dispatch", "query": "다회용 텀블러 다회용 음료 용기 시장 동향 상품 사례", "bounded": true}
+{"op": "search_returned", "url_count": 8, "usage": {"input_tokens": 29436, "output_tokens": 2392, "total_tokens": 31828}}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "route_document", "web_search_generalized"]}
+{"op": "generation_usage", "input_tokens": 3578, "output_tokens": 608, "total_tokens": 4186}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "route_document"]}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "generation_usage", "input_tokens": 1509, "output_tokens": 22, "total_tokens": 1531}
+{"op": "generation_start", "tools": ["read_project_sections", "propose_record", "route_document"]}
+{"op": "tool", "name": "route_document"}
+{"op": "generation_usage", "input_tokens": 1544, "output_tokens": 14, "total_tokens": 1558}
+{"op": "generation_start", "tools": ["read_project_sections"]}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "generation_usage", "input_tokens": 656, "output_tokens": 22, "total_tokens": 678}
+{"op": "generation_start", "tools": ["read_project_sections"]}
+{"op": "generation_usage", "input_tokens": 691, "output_tokens": 88, "total_tokens": 779}

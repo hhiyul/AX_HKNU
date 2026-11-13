@@ -17,11 +17,13 @@ from app.ai.responses import Delivery, ProviderError
 from app.ai.p5.context import Budget, ContextError, MODEL_WINDOW, OUTPUT_RESERVE, SAFETY_RESERVE, THRESHOLD, history_summary_text, prepare
 from app.ai.p5.export import ExportError, export
 from app.ai.p5.provider import DemoProvider, OpenAIProvider
+from app.ai.p5.search_policy import GENERAL_CONCEPTS, generalized_query
 from app.ai.p5.store import Store, StoreError
 from app.ai.p5.usage import UsageTracker, valid_usage
 
 READ_TOOL = {"type": "function", "name": "read_project_sections", "description": "Read available project planning sections or active attached text already supplied in context. Use keys attachments or files for all active attachments, or an exact attachment ID or name. Attachments not included in this request are unavailable.", "parameters": {"type": "object", "properties": {"keys": {"type": "array", "items": {"type": "string"}}}, "required": ["keys"], "additionalProperties": False}, "strict": True}
 SEARCH_TOOL = {"type": "function", "name": "web_search", "description": "Search the web using only the user-supplied public search terms", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False}, "strict": True}
+GENERAL_SEARCH_TOOL = {"type": "function", "name": "web_search_generalized", "description": "Search public information using only broad generic concepts from the enum. Select one to four concepts relevant to the request. Never include a private name, number, source text, or free-form query. If the available concepts cannot represent the request, ask the user for explicit public search terms instead.", "parameters": {"type": "object", "properties": {"concepts": {"type": "array", "items": {"type": "string", "enum": list(GENERAL_CONCEPTS)}, "minItems": 1, "maxItems": 4}}, "required": ["concepts"], "additionalProperties": False}, "strict": True}
 ROUTE_TOOL = {"type": "function", "name": "route_document", "description": "Route a user's request for a new standalone document to the document generator; do not call for general discussion or checklist edits.", "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}, "strict": True}
 RECORD_TOOL = {"type": "function", "name": "propose_record", "description": "Prepare a reviewable additional-record proposal only when the user asks to save or record a discussion. This does not save anything. Never use it to change a checklist or a 04 document.", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "body": {"type": "string"}}, "required": ["title", "body"], "additionalProperties": False}, "strict": True}
 
@@ -65,6 +67,10 @@ class CKIn(BaseModel):
     state: str
     revision: int
     approved: bool = False
+
+
+class SearchPolicyIn(BaseModel):
+    enabled: bool
 
 
 class DocumentIn(BaseModel):
@@ -127,6 +133,23 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
     @app.get("/p5/projects/{pid}/session")
     async def session(pid: str):
         return app.state.store.create_session(pid, owner, "프로젝트 대화")
+
+    @app.get("/p5/projects/{pid}/sessions/{sid}/search-policy")
+    async def get_search_policy(pid: str, sid: str):
+        return app.state.store.search_policy(pid, sid, owner)
+
+    def apply_search_policy(pid, sid, enabled):
+        db = app.state.store
+        policy = db.set_search_policy(pid, sid, owner, enabled)
+        rid = policy.pop('active_run')
+        if not enabled and rid and app.state.search_permissions.get(rid, False):
+            app.state.search_permissions[rid] = False
+            db.event(sid, rid, 'search_disabled', '검색을 껐습니다. 이후 도착하는 검색 결과는 사용하지 않습니다.')
+        return policy
+
+    @app.put("/p5/projects/{pid}/sessions/{sid}/search-policy")
+    async def set_search_policy(pid: str, sid: str, body: SearchPolicyIn):
+        return apply_search_policy(pid, sid, body.enabled)
 
     @app.get("/p5/projects/{pid}/sessions/{sid}/messages")
     async def messages(pid: str, sid: str):
@@ -335,9 +358,11 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                 tools.append(RECORD_TOOL)
             if request.mode == "auto" and not document_mode:
                 tools.append(ROUTE_TOOL)
-            if request.search_allowed and allowed_words and hasattr(underlying_provider, "web_search"):
-                tools.append(SEARCH_TOOL)
-                selected.append({"type": "public_search_terms", "content": request.public_search_terms})
+            if request.search_allowed and hasattr(underlying_provider, "web_search"):
+                tools.append(GENERAL_SEARCH_TOOL)
+                if allowed_words:
+                    tools.append(SEARCH_TOOL)
+                    selected.append({"type": "public_search_terms", "content": request.public_search_terms})
             prepared = await prepare(provider, selected, history, current_text, tools, emit, budget, save_capsule, document_mode, observe_count=observe_count)
             wire = prepared.wire
             history = apply_prepared_history(history, prepared)
@@ -395,7 +420,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         # another stage on the same source content.
                     else:
                         history = []
-                    tools = [t for t in tools if t["name"] not in ("route_document", "propose_record") and (t["name"] != "web_search" or app.state.search_permissions.get(rid, False))]
+                    tools = [t for t in tools if t["name"] not in ("route_document", "propose_record") and (t["name"] not in ("web_search", "web_search_generalized") or app.state.search_permissions.get(rid, False))]
                     if app.state.search_permissions.get(rid, False) and allowed_words and hasattr(underlying_provider, "web_search"):
                         selected.append({"type": "public_search_terms", "content": request.public_search_terms})
                     pieces = []
@@ -406,7 +431,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                     history = apply_prepared_history(history, prepared)
                     continue
                 for call in tool_calls:
-                    if call.get("name") not in ("read_project_sections", "web_search", "propose_record") or not call.get("call_id"):
+                    if call.get("name") not in ("read_project_sections", "web_search", "web_search_generalized", "propose_record") or not call.get("call_id"):
                         raise ContextError("TOOL_NOT_ALLOWED")
                     if call['name'] not in {tool['name'] for tool in tools}:
                         raise ContextError("TOOL_NOT_ALLOWED")
@@ -430,24 +455,37 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         preview = json.dumps(tool_result, ensure_ascii=False)
                         await emit("tool_result", preview[:2000] + (" ... (일부 표시)" if len(preview) > 2000 else ""))
                     else:
-                        query = args.get("query") if isinstance(args, dict) else None
-                        words = re.findall(r"\w+", query.casefold()) if isinstance(query, str) else []
-                        if not request.search_allowed or not allowed_words or not words or not set(words) <= allowed_words or not hasattr(underlying_provider, "web_search"):
+                        if not request.search_allowed or not hasattr(underlying_provider, "web_search"):
                             raise ContextError("SEARCH_NOT_ALLOWED")
+                        if call['name'] == 'web_search_generalized':
+                            try:
+                                if not isinstance(args, dict) or set(args) != {'concepts'}:
+                                    raise ValueError('SEARCH_INPUT_DENIED')
+                                search_query = generalized_query(args['concepts'])
+                            except ValueError:
+                                raise ContextError('SEARCH_NOT_ALLOWED') from None
+                            await emit('tool_query', '일반화된 검색어: ' + search_query)
+                        else:
+                            query = args.get("query") if isinstance(args, dict) else None
+                            words = re.findall(r"\w+", query.casefold()) if isinstance(query, str) else []
+                            if not allowed_words or not words or not set(words) <= allowed_words:
+                                raise ContextError("SEARCH_NOT_ALLOWED")
+                            search_query = ' '.join(words)
+                            await emit('tool_query', '직접 허용한 검색어: ' + search_query)
                         if app.state.search_permissions.get(rid, False):
                             await emit("tool_started", "허용한 공개 검색어로 웹을 검색하고 있습니다.")
                             try:
-                                tool_result = await provider.web_search(" ".join(words))
+                                tool_result = await provider.web_search(search_query)
                             except ProviderError as exc:
                                 # Unknown delivery is already promoted by GuardedProvider;
                                 # a confirmed failure can be explained without fabricating results.
                                 tool_result = {"error": "SEARCH_FAILED", "message": "웹 검색 결과를 확인하지 못했습니다. 검색하지 않은 사실을 확인된 근거로 사용하지 마세요."}
-                                tools = [t for t in tools if t.get("name") != "web_search"]
+                                tools = [t for t in tools if t.get("name") not in ("web_search", "web_search_generalized")]
                         else:
                             tool_result = {"error": "SEARCH_DISABLED"}
                         if not app.state.search_permissions.get(rid, False):
                             tool_result = {"error": "SEARCH_DISABLED"}
-                            tools = [t for t in tools if t.get("name") != "web_search"]
+                            tools = [t for t in tools if t.get("name") not in ("web_search", "web_search_generalized")]
                             selected = [x for x in selected if x.get("type") != "public_search_terms"]
                             await emit("tool_finished", "검색이 꺼져 이후 도착한 결과를 사용하지 않습니다.")
                         elif tool_result.get("error"):
@@ -467,7 +505,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         {"type": "function_call_output", "call_id": call["call_id"], "output": json.dumps(tool_result, ensure_ascii=False)},
                     ])
                 if not app.state.search_permissions.get(rid, False):
-                    tools = [t for t in tools if t.get("name") != "web_search"]
+                    tools = [t for t in tools if t.get("name") not in ("web_search", "web_search_generalized")]
                     selected = [x for x in selected if x.get("type") != "public_search_terms"]
                 prepared = await prepare(provider, selected, history, current_text, tools, emit, budget, save_capsule, document_mode, tail, observe_count)
                 wire = prepared.wire
@@ -506,7 +544,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             reason = {
                 "MODEL_LIMIT_EXCEEDED": "모델의 실제 입력 한도를 넘어 요청을 중단했습니다. 자료를 줄여 주세요.",
                 "KEY_MISSING_OR_INVALID": "OpenAI 연결 설정을 확인해 주세요.",
-                "SEARCH_NOT_ALLOWED": "허용한 공개 검색어 범위를 벗어나 검색을 중단했습니다.",
+                "SEARCH_NOT_ALLOWED": "허용된 일반 개념 또는 공개 검색어 범위를 벗어나 검색을 중단했습니다.",
                 "CAPSULE_CONFLICT": "컨텍스트 저장이 충돌하여 요청을 중단했습니다.",
             }.get(code, "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요.")
             await emit("failed", reason)
@@ -524,13 +562,14 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
     @app.post("/p5/projects/{pid}/sessions/{sid}/runs", status_code=202)
     async def start_run(pid: str, sid: str, body: RunIn):
         db = app.state.store
-        db.session(pid, sid, owner)
+        policy = db.search_policy(pid, sid, owner)
         if not body.text.strip():
             if not db.active_files(sid):
                 raise HTTPException(422, "메시지 또는 첨부 파일이 필요합니다.")
             body = body.model_copy(update={"text": ""})
+        body = body.model_copy(update={'search_allowed': policy['enabled']})
         rid = db.begin_run(pid, sid, owner)
-        app.state.search_permissions[rid] = body.search_allowed
+        app.state.search_permissions[rid] = policy['enabled']
         task = asyncio.create_task(run_task(pid, sid, rid, body))
         app.state.tasks[rid] = task
         def cleanup(done):
@@ -546,8 +585,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
         app.state.store.session(pid, sid, owner)
         if not app.state.store.run_current(sid, rid):
             raise HTTPException(409, "RUN_NOT_ACTIVE")
-        app.state.search_permissions[rid] = False
-        app.state.store.event(sid, rid, "search_disabled", "검색을 껐습니다. 이후 도착하는 검색 결과는 사용하지 않습니다.")
+        apply_search_policy(pid, sid, False)
         return {"search_allowed": False}
 
     @app.get("/p5/projects/{pid}/sessions/{sid}/runs/{rid}")

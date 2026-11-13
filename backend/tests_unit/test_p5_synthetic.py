@@ -25,6 +25,9 @@ async def env(tmp_path):
 
 
 async def start_and_wait(app, client, sid, body):
+    if 'search_allowed' in body:
+        policy = await client.put(f"/p5/projects/demo/sessions/{sid}/search-policy", json={'enabled': body['search_allowed']})
+        assert policy.status_code == 200
     r = await client.post(f"/p5/projects/demo/sessions/{sid}/runs", json=body)
     assert r.status_code == 202, r.text
     rid = r.json()["run_id"]
@@ -327,6 +330,75 @@ async def test_autonomous_search_uses_only_approved_public_terms(env):
 
 
 @pytest.mark.asyncio
+async def test_generalized_search_uses_only_fixed_concepts_and_no_private_values(env):
+    app, db, client = env
+    class Generalized(DemoProvider):
+        def __init__(self): self.wires=[]; self.queries=[]
+        async def stream(self,wire):
+            self.wires.append(wire)
+            if len(self.wires)==1:
+                yield {'type':'tool','name':'web_search_generalized','call_id':'g1','arguments':json.dumps({'concepts':['tumbler','market']})}
+            else:
+                yield {'type':'delta','text':'일반화 검색을 확인했습니다.'}
+            yield {'type':'completed'}
+        async def web_search(self, query):
+            self.queries.append(query)
+            return {'text':'공개 자료 요약','urls':['https://example.com']}
+    provider=Generalized();app.state.provider=provider
+    db.update_ck('demo','demo','ck_01','UAT_PRIVATE_BRAND_739 다회용 텀블러 단가 13791원','DECIDED',0)
+    sid=(await client.get('/p5/projects/demo/session')).json()['id']
+    rid=await start_and_wait(app,client,sid,{'text':'이 상품의 시장을 찾아줘','search_allowed':True})
+    assert provider.queries==['다회용 텀블러 시장 동향']
+    assert 'UAT_PRIVATE_BRAND_739' not in provider.queries[0] and '13791' not in provider.queries[0]
+    events=db.all('SELECT kind,content FROM events WHERE run_id=? ORDER BY seq',(rid,))
+    assert any(e['kind']=='tool_query' and e['content']=='일반화된 검색어: 다회용 텀블러 시장 동향' for e in events)
+    assert not any(t['name']=='web_search' for t in provider.wires[0]['tools'])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('args', [
+    {'concepts':['tumbler','PRIVATE_BRAND_739']}, {'concepts':['tumbler','tumbler']},
+    {'concepts':['tumbler'],'query':'비공개 13791원'}, {'concepts':[13791]}, {'concepts':[]},
+])
+async def test_generalized_search_rejects_untrusted_extra_values(env,args):
+    app, db, client=env
+    class Malicious(DemoProvider):
+        def __init__(self):self.searches=[]
+        async def stream(self,wire):
+            yield {'type':'tool','name':'web_search_generalized','call_id':'bad','arguments':json.dumps(args,ensure_ascii=False)}
+            yield {'type':'completed'}
+        async def web_search(self,q):self.searches.append(q);return {'text':'x','urls':[]}
+    provider=Malicious();app.state.provider=provider
+    sid=(await client.get('/p5/projects/demo/session')).json()['id']
+    rid=await start_and_wait(app,client,sid,{'text':'시장 조사','search_allowed':True})
+    assert not provider.searches
+    assert db.one('SELECT status FROM runs WHERE id=?',(rid,))['status']=='failed'
+
+
+@pytest.mark.asyncio
+async def test_search_permission_is_persistent_and_run_payload_cannot_enable_it(env):
+    app, db, client=env
+    class Inspect(DemoProvider):
+        def __init__(self): self.wires=[]
+        async def stream(self,wire):
+            self.wires.append(wire)
+            yield {'type':'delta','text':'완료'}
+            yield {'type':'completed'}
+    provider=Inspect();app.state.provider=provider
+    sid=(await client.get('/p5/projects/demo/session')).json()['id'];base=f'/p5/projects/demo/sessions/{sid}'
+    assert (await client.get(base+'/search-policy')).json()=={'enabled':False,'epoch':0}
+    response=await client.post(base+'/runs',json={'text':'질문','search_allowed':True})
+    await app.state.tasks[response.json()['run_id']]
+    assert not any('web_search' in t['name'] for t in provider.wires[-1]['tools'])
+    assert (await client.put(base+'/search-policy',json={'enabled':True})).json()=={'enabled':True,'epoch':1}
+    restarted=create_app(db,provider)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=restarted),base_url='http://test') as other:
+        assert (await other.get(base+'/search-policy')).json()=={'enabled':True,'epoch':1}
+        assert (await other.put(base+'/search-policy',json={'enabled':False})).json()=={'enabled':False,'epoch':2}
+    assert (await client.get(base+'/search-policy')).json()['enabled'] is False
+
+
+@pytest.mark.asyncio
 async def test_unperformed_search_is_explained_and_never_presented_as_result(env):
     app, db, client = env
     class NoSearch(DemoProvider):
@@ -575,15 +647,17 @@ async def test_turning_off_search_drops_late_result_and_prevents_another_search(
     provider = SlowSearch(); app.state.provider = provider
     sid = (await client.get('/p5/projects/demo/session')).json()['id']
     base = f'/p5/projects/demo/sessions/{sid}'
+    assert (await client.put(base + '/search-policy', json={'enabled':True})).status_code == 200
     rid = (await client.post(base + '/runs', json={'text': '검색', 'mode': 'chat', 'search_allowed': True, 'public_search_terms': 'public'})).json()['run_id']
     task = app.state.tasks[rid]
     await asyncio.wait_for(started.wait(), 1)
     assert (await client.post(base + f'/runs/{rid}/search-off')).status_code == 200
+    assert (await client.put(base + '/search-policy', json={'enabled':True})).json()['enabled'] is True
     release.set(); await task
     assert provider.search_count == 1 and len(provider.wires) == 2
     assert 'LATE_PRIVATE_RESULT' not in json.dumps(provider.wires[1])
     assert 'SEARCH_DISABLED' in json.dumps(provider.wires[1])
-    assert not any(t.get('name') == 'web_search' for t in provider.wires[1]['tools'])
+    assert not any(t.get('name') in ('web_search', 'web_search_generalized') for t in provider.wires[1]['tools'])
     events = (await client.get(base + '/events')).json()
     assert not any('LATE_PRIVATE_RESULT' in e['content'] for e in events)
     assert events[-1]['kind'] == 'completed'
