@@ -36,7 +36,7 @@ const events = [
  {run_id:'replay',seq:5,kind:'completed',content:'done'}
 ];
 const context = {document:doc, console, part, confirm:()=>true,
- fetch:async (url)=>{if(url==='/p5/config') return new Promise(()=>{}); return {ok:true,json:async()=>url.endsWith('/messages')?[]:events}},
+ fetch:async (url)=>{if(url==='/p5/config') return new Promise(()=>{}); return {ok:true,json:async()=>url.endsWith('/messages')?[{role:'user',content:'legacy user'},{role:'assistant',content:'legacy reply'},{role:'user',content:'hello'},{role:'assistant',content:'one two\nthree'}]:events}},
  window:{open(){}}, EventSource:class {close(){}}};
 const checks = `
 addEvent('live',{seq:1,kind:'delta',content:'가'});
@@ -59,7 +59,7 @@ if (!$('runUsage').textContent.includes('미확인 1건') || !$('runUsage').text
 sid='synthetic';
 loadHistory(null).then(()=>{
   const children=$('timeline').children;
-  if(children.length!==3 || children[1].textContent!=='one two\\nthree') throw Error('replay delta rendering');
+  if(children.length!==5 || children[0].textContent!=='나: legacy user' || children[1].textContent!=='AI: legacy reply' || children[3].textContent!=='one two\\nthree') throw Error('replay and legacy history rendering');
   if (!$('contextHeadline').textContent.includes('60,000') || !$('contextHeadline').textContent.includes('OpenAI 계수')) throw Error('replay count');
   if (!$('generationUsage').textContent.includes('60,100')) throw Error('replay usage');
   if (!$('runUsage').textContent.includes('66,920') || !$('runUsageParts').textContent.includes('웹 검색')) throw Error('replay total');

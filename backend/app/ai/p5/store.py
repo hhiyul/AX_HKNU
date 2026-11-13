@@ -37,6 +37,7 @@ class Store:
         CREATE TABLE IF NOT EXISTS attachments(session_id TEXT NOT NULL, file_id TEXT NOT NULL, active INTEGER NOT NULL, encoding TEXT NOT NULL, PRIMARY KEY(session_id,file_id));
         CREATE TABLE IF NOT EXISTS candidates(id TEXT PRIMARY KEY, project_id TEXT NOT NULL, session_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, manifest TEXT NOT NULL, saved_doc TEXT);
         CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, file_id TEXT NOT NULL, revision INTEGER NOT NULL, manifest TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS project_records(project_id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, revision INTEGER NOT NULL);
         CREATE UNIQUE INDEX IF NOT EXISTS one_session_per_project ON sessions(project_id);
         """)
         self.db.commit()
@@ -98,7 +99,30 @@ class Store:
     def finish_run(self, sid, rid, status):
         with self.lock, self.db:
             self.db.execute("UPDATE runs SET status=? WHERE id=? AND session_id=?", (status, rid, sid))
-            self.db.execute("UPDATE sessions SET active_run=NULL WHERE id=? AND active_run=?", (sid, rid))
+            if status != "unknown":
+                self.db.execute("UPDATE sessions SET active_run=NULL WHERE id=? AND active_run=?", (sid, rid))
+
+    def record(self, project_id):
+        row = self.one("SELECT title,body,revision FROM project_records WHERE project_id=?", (project_id,))
+        return {"exists": True, **row} if row else {"exists": False, "title": "", "body": "", "revision": 0}
+
+    def save_record(self, project_id, title, body, revision):
+        with self.lock, self.db:
+            row = self.db.execute("SELECT revision FROM project_records WHERE project_id=?", (project_id,)).fetchone()
+            if (row[0] if row else 0) != revision:
+                raise StoreError("REVISION_CONFLICT")
+            if row:
+                self.db.execute("UPDATE project_records SET title=?,body=?,revision=revision+1 WHERE project_id=? AND revision=?", (title, body, project_id, revision))
+            else:
+                self.db.execute("INSERT INTO project_records VALUES (?,?,?,1)", (project_id, title, body))
+        return self.record(project_id)
+
+    def planning_export(self, project_id):
+        with self.lock:
+            rows = self.all("SELECT key,content,state FROM ck WHERE project_id=? ORDER BY key", (project_id,))
+            if [x["key"] for x in rows] != [f"ck_0{n}" for n in range(1, 7)]:
+                raise StoreError("REQUIRED_DATA_UNAVAILABLE")
+            return rows, self.record(project_id)
 
     def event(self, sid, rid, kind, content):
         with self.lock, self.db:
@@ -222,6 +246,8 @@ class Store:
                 actual = self.one("SELECT f.revision FROM files f JOIN attachments a ON a.file_id=f.id WHERE f.id=? AND f.project_id=? AND a.session_id=? AND a.active=1", (ref["id"], document["project_id"], ref["session_id"]))
             elif typ == "document":
                 actual = None if ref.get("source") == "editor" else self.one("SELECT revision FROM documents WHERE project_id=? AND id=?", (document["project_id"], ref["id"]))
+            elif typ == "record":
+                actual = self.one("SELECT revision FROM project_records WHERE project_id=?", (document["project_id"],))
             elif typ == "session":
                 session = self.one("SELECT id FROM sessions WHERE id=? AND project_id=? AND deleted=0", (ref["id"], document["project_id"]))
                 if session and "message_refs" in ref:

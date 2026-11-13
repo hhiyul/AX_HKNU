@@ -6,6 +6,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
@@ -18,9 +19,10 @@ from app.ai.p5.provider import DemoProvider, OpenAIProvider
 from app.ai.p5.store import Store, StoreError
 from app.ai.p5.usage import UsageTracker, valid_usage
 
-READ_TOOL = {"type": "function", "name": "read_project_sections", "description": "Read the current project's planning sections", "parameters": {"type": "object", "properties": {"keys": {"type": "array", "items": {"type": "string"}}}, "required": ["keys"], "additionalProperties": False}, "strict": True}
+READ_TOOL = {"type": "function", "name": "read_project_sections", "description": "Read available project planning sections or active attached text already supplied in context. Use keys attachments or files for all active attachments, or an exact attachment ID or name. Attachments not included in this request are unavailable.", "parameters": {"type": "object", "properties": {"keys": {"type": "array", "items": {"type": "string"}}}, "required": ["keys"], "additionalProperties": False}, "strict": True}
 SEARCH_TOOL = {"type": "function", "name": "web_search", "description": "Search the web using only the user-supplied public search terms", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False}, "strict": True}
 ROUTE_TOOL = {"type": "function", "name": "route_document", "description": "Route a user's request for a new standalone document to the document generator; do not call for general discussion or checklist edits.", "parameters": {"type": "object", "properties": {}, "required": [], "additionalProperties": False}, "strict": True}
+RECORD_TOOL = {"type": "function", "name": "propose_record", "description": "Prepare a reviewable additional-record proposal only when the user asks to save or record a discussion. This does not save anything. Never use it to change a checklist or a 04 document.", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "body": {"type": "string"}}, "required": ["title", "body"], "additionalProperties": False}, "strict": True}
 
 
 def decode_attachment(filename: str, data: bytes) -> tuple[str, str]:
@@ -81,7 +83,16 @@ class CandidateSave(BaseModel):
     body: str = Field(min_length=1)
 
 
+class RecordIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1)
+    revision: int = Field(ge=0)
+    approved: bool = False
+
+
 def is_document_request(text: str) -> bool:
+    if re.search(r"추가\s*기록", text) and not re.search(r"사업계획서|상품기획서|상세페이지", text):
+        return False
     return bool(re.search(r"(문서|기획서|사업계획서|상세페이지).{0,30}(작성|만들|생성|써)", text))
 
 
@@ -91,6 +102,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
     app.state.store.seed()
     app.state.provider = provider or DemoProvider()
     app.state.tasks = {}
+    app.state.search_permissions = {}
     owner = "demo"  # This application is synthetic-only, not an authentication boundary.
     # A process restart is not evidence that a remote generation was cancelled.
     # Keep the session fence until a future explicit recovery contract exists.
@@ -133,6 +145,15 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
         app.state.store.session(pid, sid, owner)
         return [{k: a[k] for k in ("id", "name", "revision", "encoding")} for a in app.state.store.active_files(sid)]
 
+    @app.get("/p5/projects/{pid}/sessions/{sid}/attachments/{fid}/content")
+    async def attachment_content(pid: str, sid: str, fid: str):
+        app.state.store.session(pid, sid, owner)
+        attachment = next((a for a in app.state.store.active_files(sid) if a["id"] == fid), None)
+        if attachment is None:
+            raise HTTPException(404, "NOT_FOUND")
+        filename = quote(Path(attachment["name"]).name, safe="")
+        return Response(attachment["body"], media_type="application/octet-stream", headers={"Content-Disposition": f"attachment; filename=attachment.txt; filename*=UTF-8''{filename}"})
+
     @app.post("/p5/projects/{pid}/sessions/{sid}/attachments", status_code=201)
     async def attach(pid: str, sid: str, file: UploadFile = File(...)):
         app.state.store.session(pid, sid, owner)
@@ -161,6 +182,33 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
         if not body.approved:
             raise HTTPException(403, "최종 승인이 필요합니다.")
         return app.state.store.update_ck(pid, owner, key, body.content, body.state, body.revision)
+
+    @app.get("/p5/projects/{pid}/record")
+    async def get_record(pid: str):
+        app.state.store.project(pid, owner)
+        return app.state.store.record(pid)
+
+    @app.put("/p5/projects/{pid}/record")
+    async def save_record(pid: str, body: RecordIn):
+        app.state.store.project(pid, owner)
+        if not body.approved:
+            raise HTTPException(403, "내용을 확인하고 기록 저장을 승인해 주세요.")
+        return app.state.store.save_record(pid, body.title, body.body, body.revision)
+
+    @app.get("/p5/projects/{pid}/planning-export/{fmt}")
+    async def planning_export(pid: str, fmt: str):
+        app.state.store.project(pid, owner)
+        if fmt not in ("md", "txt"):
+            raise HTTPException(422, "UNSUPPORTED_FORMAT")
+        rows, record = app.state.store.planning_export(pid)
+        labels = ("상품선정", "고객선정", "구매가치결정", "상품구성결정", "가격설정", "제작가능성")
+        chunks = ["# 저장된 상품 기획" if fmt == "md" else "저장된 상품 기획"]
+        for row, label in zip(rows, labels):
+            title = f"{label} ({row['key']}) · {row['state']}"
+            chunks.append(("## " if fmt == "md" else "") + title + "\n\n" + (row["content"] or "(내용 없음)"))
+        if record["exists"]:
+            chunks.append(("## " if fmt == "md" else "") + "추가 기록: " + record["title"] + "\n\n" + record["body"])
+        return Response("\n\n".join(chunks).encode("utf-8"), media_type="text/markdown" if fmt == "md" else "text/plain", headers={"Content-Disposition": f'attachment; filename="planning.{fmt}"'})
 
     async def run_task(pid, sid, rid, request: RunIn):
         db, underlying_provider = app.state.store, app.state.provider
@@ -194,6 +242,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         yield event
                 except BaseException as exc:
                     not_dispatched = isinstance(exc, ProviderError) and exc.delivery == Delivery.NOT_DISPATCHED
+                    if isinstance(exc, ProviderError) and exc.delivery == Delivery.UNKNOWN:
+                        raise ContextError("PROVIDER_OUTCOME_UNKNOWN") from exc
                     raise
                 finally:
                     await tracker.finish("generation", usage, not_dispatched)
@@ -204,6 +254,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                     result = await underlying_provider.web_search(query)
                 except BaseException as exc:
                     await tracker.finish("web_search", getattr(exc, "usage", None), not_dispatched=isinstance(exc, ProviderError) and exc.delivery == Delivery.NOT_DISPATCHED)
+                    if isinstance(exc, ProviderError) and exc.delivery == Delivery.UNKNOWN:
+                        raise ContextError("PROVIDER_OUTCOME_UNKNOWN") from exc
                     raise
                 await tracker.finish("web_search", getattr(result, "usage", None))
                 return result
@@ -226,9 +278,14 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                 raise ContextError("INVALID_MODE")
             current_text = request.text or "첨부 자료만 보냈습니다. 실제로 읽은 내용을 짧게 설명하고 다음 행동을 제안해 주세요."
             snapshot = db.snapshot(pid)
+            project_record = db.record(pid)
+            if project_record["exists"]:
+                snapshot.append({"type": "record", "key": "record", "content": project_record["body"], "title": project_record["title"], "revision": project_record["revision"]})
             file_snapshot = db.active_files(sid)
             selected = [x for x in snapshot if not document_mode or x["type"] != "ck" or x["state"] == "DECIDED" or (x["state"] == "DRAFT" and x["key"] in request.include_draft)]
             manifest = [{"type": "project", "id": pid, "revision": None}]
+            if project_record["exists"]:
+                manifest.append({"type": "record", "id": "record", "revision": project_record["revision"]})
             manifest.extend({"type": "ck", "id": x["key"], "revision": x["revision"], "state": x["state"]} for x in selected if x["type"] == "ck")
             for f in file_snapshot if not document_mode or request.include_session else []:
                 selected.append({"type": "attachment", "id": f["id"], "name": f["name"], "content": f["body"].decode(f["encoding"]), "revision": f["revision"]})
@@ -276,6 +333,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             budget = Budget()
             allowed_words = set(re.findall(r"\w+", request.public_search_terms.casefold()))
             tools = [READ_TOOL]
+            if not document_mode:
+                tools.append(RECORD_TOOL)
             if request.mode == "auto" and not document_mode:
                 tools.append(ROUTE_TOOL)
             if request.search_allowed and allowed_words and hasattr(underlying_provider, "web_search"):
@@ -321,6 +380,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                     document_mode = True
                     selected = [x for x in snapshot if x["type"] != "ck" or x["state"] == "DECIDED" or (x["state"] == "DRAFT" and x["key"] in request.include_draft)]
                     manifest = [{"type": "project", "id": pid, "revision": None}]
+                    if project_record["exists"]:
+                        manifest.append({"type": "record", "id": "record", "revision": project_record["revision"]})
                     manifest.extend({"type": "ck", "id": x["key"], "revision": x["revision"], "state": x["state"]} for x in selected if x["type"] == "ck")
                     sources = []
                     if request.include_session:
@@ -336,8 +397,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         # another stage on the same source content.
                     else:
                         history = []
-                    tools = [t for t in tools if t["name"] != "route_document"]
-                    if request.search_allowed and allowed_words and hasattr(underlying_provider, "web_search"):
+                    tools = [t for t in tools if t["name"] not in ("route_document", "propose_record") and (t["name"] != "web_search" or app.state.search_permissions.get(rid, False))]
+                    if app.state.search_permissions.get(rid, False) and allowed_words and hasattr(underlying_provider, "web_search"):
                         selected.append({"type": "public_search_terms", "content": request.public_search_terms})
                     pieces = []
                     tail = []
@@ -347,18 +408,24 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                     history = apply_prepared_history(history, prepared)
                     continue
                 for call in tool_calls:
-                    if call.get("name") not in ("read_project_sections", "web_search") or not call.get("call_id"):
+                    if call.get("name") not in ("read_project_sections", "web_search", "propose_record") or not call.get("call_id"):
                         raise ContextError("TOOL_NOT_ALLOWED")
                     try:
                         args = json.loads(call.get("arguments") or "{}")
                     except (ValueError, KeyError, TypeError):
                         raise ContextError("INVALID_TOOL_ARGUMENTS") from None
-                    if call["name"] == "read_project_sections":
+                    if call["name"] == "propose_record":
+                        if document_mode or not isinstance(args, dict) or set(args) != {"title", "body"} or not isinstance(args["title"], str) or not isinstance(args["body"], str) or not args["title"].strip() or not args["body"].strip() or len(args["title"]) > 200 or len(args["body"]) > 100_000:
+                            raise ContextError("INVALID_TOOL_ARGUMENTS")
+                        await emit("record_candidate", json.dumps({"title": args["title"], "body": args["body"]}, ensure_ascii=False))
+                        tool_result = {"status": "review_required", "message": "검토안만 준비되었고 기록은 저장되지 않았습니다. 사용자가 검토하고 기록 저장을 직접 승인해야 합니다."}
+                    elif call["name"] == "read_project_sections":
                         keys = args.get("keys") if isinstance(args, dict) else None
                         if not isinstance(keys, list) or any(not isinstance(k, str) for k in keys):
                             raise ContextError("INVALID_TOOL_ARGUMENTS")
                         await emit("tool_started", "프로젝트 정보를 조회하고 있습니다.")
-                        tool_result = [x for x in selected if x.get("key") in keys]
+                        requested = {k.casefold() for k in keys}
+                        tool_result = [x for x in selected if x.get("key") in keys or (x.get("type") == "attachment" and (bool(requested & {"attachments", "attachment", "files", "file", "reference_files"}) or x.get("id") in keys or x.get("name") in keys))]
                         await emit("tool_finished", "프로젝트 정보 조회를 마쳤습니다.")
                         preview = json.dumps(tool_result, ensure_ascii=False)
                         await emit("tool_result", preview[:2000] + (" ... (일부 표시)" if len(preview) > 2000 else ""))
@@ -367,9 +434,18 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         words = re.findall(r"\w+", query.casefold()) if isinstance(query, str) else []
                         if not request.search_allowed or not allowed_words or not words or not set(words) <= allowed_words or not hasattr(underlying_provider, "web_search"):
                             raise ContextError("SEARCH_NOT_ALLOWED")
-                        await emit("tool_started", "허용한 공개 검색어로 웹을 검색하고 있습니다.")
-                        tool_result = await provider.web_search(" ".join(words))
-                        await emit("tool_finished", "웹 검색 결과를 확인했습니다.")
+                        if app.state.search_permissions.get(rid, False):
+                            await emit("tool_started", "허용한 공개 검색어로 웹을 검색하고 있습니다.")
+                            tool_result = await provider.web_search(" ".join(words))
+                        else:
+                            tool_result = {"error": "SEARCH_DISABLED"}
+                        if not app.state.search_permissions.get(rid, False):
+                            tool_result = {"error": "SEARCH_DISABLED"}
+                            tools = [t for t in tools if t.get("name") != "web_search"]
+                            selected = [x for x in selected if x.get("type") != "public_search_terms"]
+                            await emit("tool_finished", "검색이 꺼져 이후 도착한 결과를 사용하지 않습니다.")
+                        else:
+                            await emit("tool_finished", "웹 검색 결과를 확인했습니다.")
                         if isinstance(tool_result, dict) and tool_result.get("text"):
                             urls = [u for u in tool_result.get("urls", []) if isinstance(u, str)]
                             result_text = str(tool_result["text"])
@@ -380,6 +456,9 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                         {"type": "function_call", "name": call["name"], "call_id": call["call_id"], "arguments": call["arguments"]},
                         {"type": "function_call_output", "call_id": call["call_id"], "output": json.dumps(tool_result, ensure_ascii=False)},
                     ])
+                if not app.state.search_permissions.get(rid, False):
+                    tools = [t for t in tools if t.get("name") != "web_search"]
+                    selected = [x for x in selected if x.get("type") != "public_search_terms"]
                 prepared = await prepare(provider, selected, history, current_text, tools, emit, budget, save_capsule, document_mode, tail, observe_count)
                 wire = prepared.wire
                 history = apply_prepared_history(history, prepared)
@@ -403,6 +482,10 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             if pieces and db.run_current(sid, rid):
                 db.message(sid, "assistant", "".join(pieces), sources, run_id=rid)
             code = exc.code if isinstance(exc, ProviderError) else str(exc)
+            if code == "PROVIDER_OUTCOME_UNKNOWN":
+                status = "unknown"
+                await emit("outcome_unknown", "원격 처리 결과를 확인할 수 없어 새 요청을 보류합니다.")
+                return
             if code in ("COMPRESSION_FAILED", "EMPTY_SUMMARY", "INSUFFICIENT_COMPRESSION", "CAPSULE_CONFLICT"):
                 await emit("compression_failed", "컨텍스트 압축을 완료하지 못했습니다. 기존 대화는 유지됩니다.")
             reason = {
@@ -418,6 +501,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             await emit("failed", "예상하지 못한 오류로 요청을 완료하지 못했습니다.")
         finally:
             db.finish_run(sid, rid, status)
+            app.state.search_permissions.pop(rid, None)
 
     @app.post("/p5/projects/{pid}/sessions/{sid}/runs", status_code=202)
     async def start_run(pid: str, sid: str, body: RunIn):
@@ -428,6 +512,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                 raise HTTPException(422, "메시지 또는 첨부 파일이 필요합니다.")
             body = body.model_copy(update={"text": ""})
         rid = db.begin_run(pid, sid, owner)
+        app.state.search_permissions[rid] = body.search_allowed
         task = asyncio.create_task(run_task(pid, sid, rid, body))
         app.state.tasks[rid] = task
         def cleanup(done):
@@ -437,6 +522,15 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                 db.finish_run(sid, rid, "stopped")
         task.add_done_callback(cleanup)
         return {"run_id": rid}
+
+    @app.post("/p5/projects/{pid}/sessions/{sid}/runs/{rid}/search-off")
+    async def search_off(pid: str, sid: str, rid: str):
+        app.state.store.session(pid, sid, owner)
+        if not app.state.store.run_current(sid, rid):
+            raise HTTPException(409, "RUN_NOT_ACTIVE")
+        app.state.search_permissions[rid] = False
+        app.state.store.event(sid, rid, "search_disabled", "검색을 껐습니다. 이후 도착하는 검색 결과는 사용하지 않습니다.")
+        return {"search_allowed": False}
 
     @app.post("/p5/projects/{pid}/sessions/{sid}/runs/{rid}/stop")
     async def stop_run(pid: str, sid: str, rid: str):

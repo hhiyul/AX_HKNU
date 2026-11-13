@@ -1,0 +1,34 @@
+{"op": "ready", "model": "gpt-6-luna", "storage": "synthetic"}
+{"op": "count", "digest": "88cd13ee282bee63a62593164bb1b0be500fa1b054493db923b91fc8b496323b", "input_tokens": 82407}
+{"op": "count", "digest": "7032d6207e17536d45d205fd18d479e3823de945d176c81dbdc1b4934e28e0a8", "input_tokens": 14}
+{"op": "count", "digest": "a5f2ecf53d3ef10a09e78c2cfc2b249bae54d84fb1f7b9b3ab334eebf8298630", "input_tokens": 16529}
+{"op": "summary_start", "messages": 3, "roles": ["user", "assistant", "user"]}
+{"op": "count", "digest": "931de412d56e22e20ecfe85b5338e870c8143d54450a8b056687c76b53065576", "input_tokens": 65242}
+{"op": "summary_completed", "usage": {"input_tokens": 65242, "output_tokens": 110, "total_tokens": 65352}}
+{"op": "count", "digest": "2f5d554303d2e77ad4b91e96f180561e2f606be03e22ef4e2f77601b89ae26b3", "input_tokens": 17353}
+{"op": "stream_start", "digest": "2f5d554303d2e77ad4b91e96f180561e2f606be03e22ef4e2f77601b89ae26b3", "summary_labels": 1, "archive_markers": 0}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "stream_usage", "digest": "2f5d554303d2e77ad4b91e96f180561e2f606be03e22ef4e2f77601b89ae26b3", "input_tokens": 17353, "output_tokens": 42, "total_tokens": 17395}
+{"op": "stream_completed", "digest": "2f5d554303d2e77ad4b91e96f180561e2f606be03e22ef4e2f77601b89ae26b3", "deltas": 0, "seconds": 2.281}
+{"op": "count", "digest": "0c24cdb64be5a469ae21022fa1cfc5c7b3cd5bf1eb11f9054e10cc02df6aadc9", "input_tokens": 17594}
+{"op": "stream_start", "digest": "0c24cdb64be5a469ae21022fa1cfc5c7b3cd5bf1eb11f9054e10cc02df6aadc9", "summary_labels": 1, "archive_markers": 0}
+{"op": "stream_usage", "digest": "0c24cdb64be5a469ae21022fa1cfc5c7b3cd5bf1eb11f9054e10cc02df6aadc9", "input_tokens": 17594, "output_tokens": 177, "total_tokens": 17771}
+{"op": "stream_completed", "digest": "0c24cdb64be5a469ae21022fa1cfc5c7b3cd5bf1eb11f9054e10cc02df6aadc9", "deltas": 171, "seconds": 4.891}
+{"op": "count", "digest": "ee982c0ba5bc885bace45a9b9995db355086720a20f2c599a098ec772f397ab7", "input_tokens": 17601}
+{"op": "stream_start", "digest": "ee982c0ba5bc885bace45a9b9995db355086720a20f2c599a098ec772f397ab7", "summary_labels": 1, "archive_markers": 0}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "stream_usage", "digest": "ee982c0ba5bc885bace45a9b9995db355086720a20f2c599a098ec772f397ab7", "input_tokens": 17601, "output_tokens": 42, "total_tokens": 17643}
+{"op": "stream_completed", "digest": "ee982c0ba5bc885bace45a9b9995db355086720a20f2c599a098ec772f397ab7", "deltas": 0, "seconds": 2.0}
+{"op": "count", "digest": "b0a4385f806b4bfb6a0e3f11ddf1ed45bc9bbb70df7b9d1ccfad2f3e36ca0063", "input_tokens": 17842}
+{"op": "stream_start", "digest": "b0a4385f806b4bfb6a0e3f11ddf1ed45bc9bbb70df7b9d1ccfad2f3e36ca0063", "summary_labels": 1, "archive_markers": 0}
+{"op": "stream_usage", "digest": "b0a4385f806b4bfb6a0e3f11ddf1ed45bc9bbb70df7b9d1ccfad2f3e36ca0063", "input_tokens": 17842, "output_tokens": 140, "total_tokens": 17982}
+{"op": "stream_completed", "digest": "b0a4385f806b4bfb6a0e3f11ddf1ed45bc9bbb70df7b9d1ccfad2f3e36ca0063", "deltas": 133, "seconds": 3.766}
+{"op": "count", "digest": "3d267b0f3c8ba3eb78735b9179565c62d10796e85df32699bf3cfb5fb751945f", "input_tokens": 17790}
+{"op": "stream_start", "digest": "3d267b0f3c8ba3eb78735b9179565c62d10796e85df32699bf3cfb5fb751945f", "summary_labels": 1, "archive_markers": 0}
+{"op": "tool", "name": "read_project_sections"}
+{"op": "stream_usage", "digest": "3d267b0f3c8ba3eb78735b9179565c62d10796e85df32699bf3cfb5fb751945f", "input_tokens": 17790, "output_tokens": 42, "total_tokens": 17832}
+{"op": "stream_completed", "digest": "3d267b0f3c8ba3eb78735b9179565c62d10796e85df32699bf3cfb5fb751945f", "deltas": 0, "seconds": 1.406}
+{"op": "count", "digest": "4271983db71dcd91ec8d7ee957e972f4e489e44db591e5f330c0dc0d7ba3cc0d", "input_tokens": 18031}
+{"op": "stream_start", "digest": "4271983db71dcd91ec8d7ee957e972f4e489e44db591e5f330c0dc0d7ba3cc0d", "summary_labels": 1, "archive_markers": 0}
+{"op": "stream_usage", "digest": "4271983db71dcd91ec8d7ee957e972f4e489e44db591e5f330c0dc0d7ba3cc0d", "input_tokens": 18031, "output_tokens": 142, "total_tokens": 18173}
+{"op": "stream_completed", "digest": "4271983db71dcd91ec8d7ee957e972f4e489e44db591e5f330c0dc0d7ba3cc0d", "deltas": 135, "seconds": 4.735}

@@ -8,9 +8,10 @@ import pytest
 from docx import Document
 
 from app.ai.p5.provider import DemoProvider
-from app.ai.p5.server import create_app, decode_attachment
+from app.ai.p5.server import create_app, decode_attachment, is_document_request
 from app.ai.p5.store import Store
 from app.ai.p5.usage import SearchResult, SummaryText
+from app.ai.responses import Delivery, ProviderError
 
 
 @pytest.fixture
@@ -57,12 +58,15 @@ async def test_stream_replay_and_removed_attachment_provenance(env):
     up = await client.post(base + "/attachments", files={"file": ("price.txt", "가격 3500원".encode("cp949"), "text/plain")})
     assert up.status_code == 201 and up.json()["encoding"] == "cp949"
     fid = up.json()["id"]
+    raw = await client.get(base + f"/attachments/{fid}/content")
+    assert raw.status_code == 200 and raw.content == "가격 3500원".encode("cp949")
     rid = await start_and_wait(app, client, sid, {"text": "가격을 알려줘"})
     stream = await client.get(base + f"/runs/{rid}/stream")
     assert "delta" in stream.text and "completed" in stream.text
     before = (await client.get(base + "/messages")).json()
     assert len(before) == 2 and before[1]["source_ids"] == [fid]
     assert (await client.delete(base + f"/attachments/{fid}")).status_code == 204
+    assert (await client.get(base + f"/attachments/{fid}/content")).status_code == 404
     assert len((await client.get(base + "/messages")).json()) == 2
     allowed = db.messages(sid, allowed_only=True)
     assert [m["role"] for m in allowed] == ["user"]
@@ -388,6 +392,11 @@ def test_file_formats_and_encoding():
             decode_attachment(name, data)
 
 
+def test_additional_record_is_not_misrouted_as_a_04_document():
+    assert not is_document_request('추가 기록 문서를 만들어 주세요')
+    assert is_document_request('추가 기록을 참고해 사업계획서를 작성해 주세요')
+
+
 @pytest.mark.asyncio
 async def test_file_only_request_runs_without_automatically_saving_ck(env):
     app, db, client = env
@@ -459,6 +468,170 @@ async def test_restart_marks_inflight_unknown_without_replaying(tmp_path):
         assert (await client.post(f"/p5/projects/demo/sessions/{sid}/runs", json={"text": "새 요청"})).status_code == 409
         assert "outcome_unknown" in (await client.get(f"/p5/projects/demo/sessions/{sid}/runs/{rid}/stream")).text
     db.close()
+
+
+@pytest.mark.asyncio
+async def test_unknown_remote_outcome_fences_new_run_and_survives_restart(env):
+    app, db, client = env
+    class Unknown(DemoProvider):
+        async def stream(self, wire):
+            yield {"type": "delta", "text": "partial"}
+            raise ProviderError("TRANSPORT_ERROR", Delivery.UNKNOWN)
+    app.state.provider = Unknown()
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    base = f'/p5/projects/demo/sessions/{sid}'
+    rid = await start_and_wait(app, client, sid, {'text': '질문'})
+    assert db.one('SELECT status FROM runs WHERE id=?', (rid,))['status'] == 'unknown'
+    assert db.one('SELECT active_run FROM sessions WHERE id=?', (sid,))['active_run'] == rid
+    assert (await client.get(base + '/events')).json()[-1]['kind'] == 'outcome_unknown'
+    assert (await client.post(base + '/runs', json={'text': '새 요청'})).status_code == 409
+    create_app(db, DemoProvider())
+    assert db.one('SELECT active_run FROM sessions WHERE id=?', (sid,))['active_run'] == rid
+
+
+@pytest.mark.asyncio
+async def test_unknown_web_search_outcome_also_fences_the_run(env):
+    app, db, client = env
+    class UnknownSearch(DemoProvider):
+        async def stream(self, wire):
+            yield {'type': 'tool', 'name': 'web_search', 'call_id': 'search-1', 'arguments': '{"query":"public"}'}
+            yield {'type': 'completed'}
+        async def web_search(self, query):
+            raise ProviderError('TIMEOUT', Delivery.UNKNOWN)
+    app.state.provider = UnknownSearch()
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    base = f'/p5/projects/demo/sessions/{sid}'
+    rid = await start_and_wait(app, client, sid, {'text': '검색', 'search_allowed': True, 'public_search_terms': 'public'})
+    assert db.one('SELECT status FROM runs WHERE id=?', (rid,))['status'] == 'unknown'
+    assert (await client.post(base + '/runs', json={'text': '새 요청'})).status_code == 409
+    assert (await client.get(base + '/events')).json()[-1]['kind'] == 'outcome_unknown'
+
+
+@pytest.mark.asyncio
+async def test_turning_off_search_drops_late_result_and_prevents_another_search(env):
+    app, db, client = env
+    started, release = asyncio.Event(), asyncio.Event()
+    class SlowSearch(DemoProvider):
+        def __init__(self): self.wires = []; self.search_count = 0
+        async def stream(self, wire):
+            self.wires.append(wire)
+            if len(self.wires) == 1:
+                yield {'type': 'tool', 'name': 'web_search', 'call_id': 'call-1', 'arguments': '{"query":"public"}'}
+            else:
+                yield {'type': 'delta', 'text': '기존 자료만 사용합니다.'}
+            yield {'type': 'completed'}
+        async def web_search(self, query):
+            self.search_count += 1; started.set(); await release.wait()
+            return {'text': 'LATE_PRIVATE_RESULT', 'urls': ['https://example.com']}
+    provider = SlowSearch(); app.state.provider = provider
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    base = f'/p5/projects/demo/sessions/{sid}'
+    rid = (await client.post(base + '/runs', json={'text': '검색', 'mode': 'chat', 'search_allowed': True, 'public_search_terms': 'public'})).json()['run_id']
+    task = app.state.tasks[rid]
+    await asyncio.wait_for(started.wait(), 1)
+    assert (await client.post(base + f'/runs/{rid}/search-off')).status_code == 200
+    release.set(); await task
+    assert provider.search_count == 1 and len(provider.wires) == 2
+    assert 'LATE_PRIVATE_RESULT' not in json.dumps(provider.wires[1])
+    assert 'SEARCH_DISABLED' in json.dumps(provider.wires[1])
+    assert not any(t.get('name') == 'web_search' for t in provider.wires[1]['tools'])
+    events = (await client.get(base + '/events')).json()
+    assert not any('LATE_PRIVATE_RESULT' in e['content'] for e in events)
+    assert events[-1]['kind'] == 'completed'
+
+
+@pytest.mark.asyncio
+async def test_project_record_and_planning_export_preserve_revision_and_ck(env):
+    app, db, client = env
+    path = '/p5/projects/demo/record'
+    assert (await client.get(path)).json()['exists'] is False
+    body = {'title': '기록', 'body': '첫 문단\n\n둘째 문단', 'revision': 0, 'approved': False}
+    assert (await client.put(path, json=body)).status_code == 403
+    body['approved'] = True
+    assert (await client.put(path, json=body)).json()['revision'] == 1
+    assert (await client.put(path, json=body)).status_code == 409
+    body.update(revision=1, body='첫 문단\n\n수정된 둘째 문단')
+    assert (await client.put(path, json=body)).json()['revision'] == 2
+    for fmt in ('md', 'txt'):
+        output = await client.get('/p5/projects/demo/planning-export/' + fmt)
+        assert output.status_code == 200
+        text = output.content.decode('utf-8')
+        assert all(f'ck_0{n}' in text for n in range(1, 7))
+        assert '첫 문단\n\n수정된 둘째 문단' in text and 'UNSET' in text
+    assert (await client.get('/p5/projects/demo/planning-export/pdf')).status_code == 422
+    assert all(x['revision'] == 0 for x in db.all("SELECT revision FROM ck WHERE project_id='demo'"))
+    db.execute("DELETE FROM ck WHERE project_id='demo' AND key='ck_06'")
+    assert (await client.get('/p5/projects/demo/planning-export/md')).status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_chat_record_proposal_requires_explicit_save(env):
+    app, db, client = env
+    class Proposal(DemoProvider):
+        def __init__(self): self.calls = 0
+        async def stream(self, wire):
+            self.calls += 1
+            if self.calls == 1:
+                yield {'type': 'tool', 'name': 'propose_record', 'call_id': 'record-1', 'arguments': json.dumps({'title': '제안 제목', 'body': '검토할 내용'}, ensure_ascii=False)}
+            else:
+                yield {'type': 'delta', 'text': '검토안이 준비됐습니다.'}
+            yield {'type': 'completed'}
+    app.state.provider = Proposal()
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    await start_and_wait(app, client, sid, {'text': '이 내용을 추가 기록으로 저장해 줘', 'mode': 'chat'})
+    events = (await client.get(f'/p5/projects/demo/sessions/{sid}/events')).json()
+    proposal = json.loads(next(e['content'] for e in events if e['kind'] == 'record_candidate'))
+    assert proposal == {'title': '제안 제목', 'body': '검토할 내용'}
+    assert (await client.get('/p5/projects/demo/record')).json()['exists'] is False
+    assert all(x['revision'] == 0 for x in db.all("SELECT revision FROM ck WHERE project_id='demo'"))
+
+
+@pytest.mark.asyncio
+async def test_mixed_capsule_is_not_reused_when_an_attachment_is_removed(env):
+    app, db, client = env
+    class Capture(DemoProvider):
+        def __init__(self): self.wires = []
+        async def stream(self, wire):
+            self.wires.append(wire)
+            yield {'type': 'delta', 'text': 'DERIVED_FILE_A_SECRET'}
+            yield {'type': 'completed'}
+    provider = Capture(); app.state.provider = provider
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    base = f'/p5/projects/demo/sessions/{sid}'
+    a = (await client.post(base + '/attachments', files={'file': ('a.txt', b'FILE_A_SECRET', 'text/plain')})).json()['id']
+    b = (await client.post(base + '/attachments', files={'file': ('b.txt', b'FILE_B_ALLOWED', 'text/plain')})).json()['id']
+    await start_and_wait(app, client, sid, {'text': 'USER_ACCEPTED_OWN_DECISION'})
+    messages = db.messages(sid)
+    db.execute('UPDATE sessions SET capsule=?,capsule_ids=?,capsule_sources=?,capsule_rev=1 WHERE id=?', ('MIXED_FILE_A_SECRET', json.dumps([m['id'] for m in messages]), json.dumps([a,b]), sid))
+    assert (await client.delete(base + f'/attachments/{a}')).status_code == 204
+    await start_and_wait(app, client, sid, {'text': '다음 질문'})
+    wire = json.dumps(provider.wires[-1], ensure_ascii=False)
+    assert 'FILE_A_SECRET' not in wire and 'DERIVED_FILE_A_SECRET' not in wire and 'MIXED_FILE_A_SECRET' not in wire
+    assert 'FILE_B_ALLOWED' in wire and 'USER_ACCEPTED_OWN_DECISION' in wire
+
+
+@pytest.mark.asyncio
+async def test_project_read_tool_can_read_only_active_request_attachments(env):
+    app, db, client = env
+    class ReadFiles(DemoProvider):
+        def __init__(self): self.wires = []
+        async def stream(self, wire):
+            self.wires.append(wire)
+            if len(self.wires) % 2:
+                yield {'type': 'tool', 'name': 'read_project_sections', 'call_id': 'files-1', 'arguments': '{"keys":["attachments"]}'}
+            else:
+                yield {'type': 'delta', 'text': '파일을 확인했습니다.'}
+            yield {'type': 'completed'}
+    p = ReadFiles(); app.state.provider = p
+    sid = (await client.get('/p5/projects/demo/session')).json()['id']
+    base = f'/p5/projects/demo/sessions/{sid}'
+    a = (await client.post(base + '/attachments', files={'file': ('a.txt', b'EXCLUDED_SECRET', 'text/plain')})).json()['id']
+    await client.post(base + '/attachments', files={'file': ('b.md', b'RETAINED_TEXT', 'text/plain')})
+    await start_and_wait(app, client, sid, {'text': '파일 읽기'})
+    assert 'EXCLUDED_SECRET' in json.dumps(p.wires[1]) and 'RETAINED_TEXT' in json.dumps(p.wires[1])
+    await client.delete(base + f'/attachments/{a}')
+    await start_and_wait(app, client, sid, {'text': '다시 파일 읽기'})
+    assert 'EXCLUDED_SECRET' not in json.dumps(p.wires[3]) and 'RETAINED_TEXT' in json.dumps(p.wires[3])
 
 
 @pytest.mark.asyncio

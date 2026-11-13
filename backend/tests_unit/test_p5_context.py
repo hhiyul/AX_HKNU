@@ -98,7 +98,7 @@ async def test_unknown_outcome_never_retries_or_replaces_capsule():
     saved = []
     async def emit(*args): pass
     async def save(*args): saved.append(args)
-    with pytest.raises(ContextError, match="COMPRESSION_FAILED"):
+    with pytest.raises(ContextError, match="PROVIDER_OUTCOME_UNKNOWN"):
         await prepare(p, [], history, "q", [], emit, save_summary=save)
     assert len(p.calls) == 1 and not saved
 
