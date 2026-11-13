@@ -73,3 +73,47 @@ vm.runInNewContext(code + '\n' + checks, context);
         [node, "-e", harness], input=script, text=True, encoding="utf-8", capture_output=True, timeout=15
     )
     assert completed.returncode == 0, completed.stderr
+
+
+def test_generated_record_is_editable_without_overwriting_or_automatic_save():
+    node = shutil.which('node')
+    if not node:
+        pytest.skip('Node.js is needed for the browser renderer regression test')
+    html = (Path(__file__).parents[1] / 'app/ai/p5/ui.html').read_text(encoding='utf-8')
+    script = html.split('<script>', 1)[1].split('</script>', 1)[0]
+    harness = r"""
+const vm=require('node:vm'), elements=new Map(), calls=[];
+function element(){return {children:[],value:'',textContent:'',className:'',scrollHeight:0,append(...children){this.children.push(...children)},replaceChildren(){this.children=[]}}}
+const doc={getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement(){return element()},createTextNode(text){return {textContent:text}}};
+const old={run_id:'old',seq:1,kind:'record_candidate',content:JSON.stringify({title:'과거 제목',body:'과거 내용'})};
+const context={document:doc,console,process,confirm:()=>true,window:{open(){}},EventSource:class{close(){}},fetch:async(url,options={})=>{
+  if(url==='/p5/config')return new Promise(()=>{});
+  calls.push({url,options});return {ok:true,json:async()=>url.endsWith('/messages')?[]:url.endsWith('/events')?[old]:{revision:2}};
+}};
+const checks=`
+$('recordTitle').value='기존 제목'; $('recordBody').value='사용자 편집';
+let p=JSON.stringify({title:'제안 제목',body:'제안 내용'});
+addEvent('live',{seq:1,kind:'record_candidate',content:p});
+if($('recordTitle').value!=='기존 제목'||$('recordBody').value!=='사용자 편집\\n\\n제안 제목\\n제안 내용')throw Error('existing draft overwritten or proposal omitted');
+if(!$('recordState').textContent.includes('미저장'))throw Error('not marked unsaved');
+addEvent('live',{seq:1,kind:'record_candidate',content:p});
+if($('recordBody').value.split('제안 내용').length!==2)throw Error('duplicate live event appended');
+if(calls.some(x=>x.options.method==='PUT'))throw Error('proposal saved automatically');
+$('recordTitle').value='직접 수정 제목'; $('recordBody').value='직접 수정 본문';
+sid='synthetic';loadHistory(null).then(async()=>{
+ if($('recordTitle').value!=='직접 수정 제목'||$('recordBody').value!=='직접 수정 본문')throw Error('history replay modified draft');
+ let oldButton=$('timeline').children[0].children[1];oldButton.onclick();
+ if(!$('recordBody').value.includes('과거 내용'))throw Error('historical proposal unavailable');
+ $('recordTitle').value='';$('recordBody').value='';
+ addEvent('fresh',{seq:1,kind:'record_candidate',content:p});
+ if($('recordTitle').value!=='제안 제목'||$('recordBody').value!=='제안 내용')throw Error('new proposal did not populate fields');
+ $('recordTitle').value='수정한 제목';$('recordBody').value='수정한 본문';
+ await $('saveRecord').onclick();
+ let save=calls.find(x=>x.options.method==='PUT'),body=JSON.parse(save.options.body);
+ if(body.title!=='수정한 제목'||body.body!=='수정한 본문'||!body.approved)throw Error('explicit save did not use edited values');
+ console.log('editable record proposal passed');
+}).catch(e=>{console.error(e);process.exitCode=1});`;
+context.calls=calls;vm.runInNewContext(require('node:fs').readFileSync(0,'utf8')+'\n'+checks,context);
+"""
+    completed = subprocess.run([node, '-e', harness], input=script, text=True, encoding='utf-8', capture_output=True, timeout=15)
+    assert completed.returncode == 0, completed.stderr
