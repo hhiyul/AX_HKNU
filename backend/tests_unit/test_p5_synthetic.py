@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+import sqlite3
 import zipfile
 
 import httpx
@@ -462,16 +463,34 @@ async def test_restart_marks_inflight_unknown_without_replaying(tmp_path):
     rid = db.begin_run("demo", sid, "demo")
     app = create_app(db, DemoProvider())
     assert db.one("SELECT status FROM runs WHERE id=?", (rid,))["status"] == "unknown"
-    assert db.one("SELECT active_run FROM sessions WHERE id=?", (sid,))["active_run"] == rid
+    assert db.one("SELECT active_run FROM sessions WHERE id=?", (sid,))["active_run"] is None
+    assert db.one("SELECT error_code,delivery FROM runs WHERE id=?", (rid,)) == {"error_code": "PROCESS_RESTART", "delivery": "unknown"}
     assert db.all("SELECT kind FROM events WHERE run_id=?", (rid,)) == [{"kind": "outcome_unknown"}]
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-        assert (await client.post(f"/p5/projects/demo/sessions/{sid}/runs", json={"text": "새 요청"})).status_code == 409
+        response = await client.post(f"/p5/projects/demo/sessions/{sid}/runs", json={"text": "새 요청"})
+        assert response.status_code == 202
+        await app.state.tasks[response.json()["run_id"]]
         assert "outcome_unknown" in (await client.get(f"/p5/projects/demo/sessions/{sid}/runs/{rid}/stream")).text
     db.close()
 
 
+def test_old_run_schema_and_unknown_fence_are_recovered(tmp_path):
+    path = str(tmp_path / "legacy.sqlite")
+    with sqlite3.connect(path) as old:
+        old.execute("CREATE TABLE runs(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL)")
+        old.execute("INSERT INTO runs VALUES('old-run','old-session','unknown','old-time')")
+    db = Store(path)
+    db.seed()
+    db.execute("INSERT INTO sessions(id,project_id,title,active_run) VALUES(?,?,?,?)", ('old-session', 'demo', '대화', 'old-run'))
+    create_app(db, DemoProvider())
+    assert db.one("SELECT status,error_code,delivery FROM runs WHERE id='old-run'") == {'status': 'unknown', 'error_code': 'PROVIDER_OUTCOME_UNKNOWN', 'delivery': 'unknown'}
+    assert db.one("SELECT active_run FROM sessions WHERE id='old-session'")['active_run'] is None
+    assert db.all("SELECT kind FROM events WHERE run_id='old-run'") == [{'kind': 'outcome_unknown'}]
+    db.close()
+
+
 @pytest.mark.asyncio
-async def test_unknown_remote_outcome_fences_new_run_and_survives_restart(env):
+async def test_unknown_remote_outcome_releases_fence_and_preserves_metadata(env):
     app, db, client = env
     class Unknown(DemoProvider):
         async def stream(self, wire):
@@ -482,15 +501,20 @@ async def test_unknown_remote_outcome_fences_new_run_and_survives_restart(env):
     base = f'/p5/projects/demo/sessions/{sid}'
     rid = await start_and_wait(app, client, sid, {'text': '질문'})
     assert db.one('SELECT status FROM runs WHERE id=?', (rid,))['status'] == 'unknown'
-    assert db.one('SELECT active_run FROM sessions WHERE id=?', (sid,))['active_run'] == rid
+    assert db.one('SELECT active_run FROM sessions WHERE id=?', (sid,))['active_run'] is None
+    metadata = (await client.get(base + '/runs/' + rid)).json()
+    assert (metadata['error_code'], metadata['delivery']) == ('TRANSPORT_ERROR', 'unknown')
+    assert db.messages(sid)[-1]['content'] == 'partial'
     assert (await client.get(base + '/events')).json()[-1]['kind'] == 'outcome_unknown'
-    assert (await client.post(base + '/runs', json={'text': '새 요청'})).status_code == 409
+    app.state.provider = DemoProvider()
+    await start_and_wait(app, client, sid, {'text': '새 요청'})
     create_app(db, DemoProvider())
-    assert db.one('SELECT active_run FROM sessions WHERE id=?', (sid,))['active_run'] == rid
+    assert db.one('SELECT active_run FROM sessions WHERE id=?', (sid,))['active_run'] is None
+    assert db.one('SELECT status,error_code FROM runs WHERE id=?', (rid,)) == {'status': 'unknown', 'error_code': 'TRANSPORT_ERROR'}
 
 
 @pytest.mark.asyncio
-async def test_unknown_web_search_outcome_also_fences_the_run(env):
+async def test_unknown_web_search_outcome_also_recovers_the_run(env):
     app, db, client = env
     class UnknownSearch(DemoProvider):
         async def stream(self, wire):
@@ -503,8 +527,10 @@ async def test_unknown_web_search_outcome_also_fences_the_run(env):
     base = f'/p5/projects/demo/sessions/{sid}'
     rid = await start_and_wait(app, client, sid, {'text': '검색', 'search_allowed': True, 'public_search_terms': 'public'})
     assert db.one('SELECT status FROM runs WHERE id=?', (rid,))['status'] == 'unknown'
-    assert (await client.post(base + '/runs', json={'text': '새 요청'})).status_code == 409
+    assert db.one('SELECT error_code,delivery FROM runs WHERE id=?', (rid,)) == {'error_code': 'TIMEOUT', 'delivery': 'unknown'}
     assert (await client.get(base + '/events')).json()[-1]['kind'] == 'outcome_unknown'
+    app.state.provider = DemoProvider()
+    await start_and_wait(app, client, sid, {'text': '새 요청'})
 
 
 @pytest.mark.asyncio

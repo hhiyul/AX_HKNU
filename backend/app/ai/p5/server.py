@@ -104,11 +104,8 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
     app.state.tasks = {}
     app.state.search_permissions = {}
     owner = "demo"  # This application is synthetic-only, not an authentication boundary.
-    # A process restart is not evidence that a remote generation was cancelled.
-    # Keep the session fence until a future explicit recovery contract exists.
-    for orphan in app.state.store.all("SELECT id,session_id FROM runs WHERE status='running'"):
-        app.state.store.execute("UPDATE runs SET status='unknown' WHERE id=? AND status='running'", (orphan["id"],))
-        app.state.store.event(orphan["session_id"], orphan["id"], "outcome_unknown", "서버 재시작으로 이전 요청의 원격 결과를 확인할 수 없습니다. 새 요청을 보류합니다.")
+    # Single-process recovery releases the local fence without assuming remote cancellation.
+    app.state.store.recover_orphans()
 
     @app.exception_handler(StoreError)
     async def store_error(_, exc):
@@ -261,7 +258,7 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
                 return result
         provider = GuardedProvider()
         pieces, sources = [], []
-        status = "failed"
+        status, error_code, delivery = "failed", None, None
         async def emit(kind, text):
             if db.run_current(sid, rid):
                 db.event(sid, rid, kind, text)
@@ -482,9 +479,14 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             if pieces and db.run_current(sid, rid):
                 db.message(sid, "assistant", "".join(pieces), sources, run_id=rid)
             code = exc.code if isinstance(exc, ProviderError) else str(exc)
+            cause = exc
+            while cause is not None and not isinstance(cause, ProviderError):
+                cause = cause.__cause__
+            raw_code = cause.code if cause else code
+            error_code = raw_code if re.fullmatch(r"[A-Z0-9_]{1,80}", raw_code) else "INTERNAL_ERROR"
+            delivery = cause.delivery.value if cause else ("unknown" if code == "PROVIDER_OUTCOME_UNKNOWN" else None)
             if code == "PROVIDER_OUTCOME_UNKNOWN":
                 status = "unknown"
-                await emit("outcome_unknown", "원격 처리 결과를 확인할 수 없어 새 요청을 보류합니다.")
                 return
             if code in ("COMPRESSION_FAILED", "EMPTY_SUMMARY", "INSUFFICIENT_COMPRESSION", "CAPSULE_CONFLICT"):
                 await emit("compression_failed", "컨텍스트 압축을 완료하지 못했습니다. 기존 대화는 유지됩니다.")
@@ -496,11 +498,14 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
             }.get(code, "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요.")
             await emit("failed", reason)
         except Exception:
+            error_code = "INTERNAL_ERROR"
             if pieces and db.run_current(sid, rid):
                 db.message(sid, "assistant", "".join(pieces), sources, run_id=rid)
             await emit("failed", "예상하지 못한 오류로 요청을 완료하지 못했습니다.")
         finally:
-            db.finish_run(sid, rid, status)
+            db.finish_run(sid, rid, status, error_code, delivery)
+            if status == "unknown":
+                db.event(sid, rid, "outcome_unknown", "원격 처리 결과는 확인되지 않았습니다. 대화는 계속 사용할 수 있습니다.")
             app.state.search_permissions.pop(rid, None)
 
     @app.post("/p5/projects/{pid}/sessions/{sid}/runs", status_code=202)
@@ -531,6 +536,14 @@ def create_app(store: Store | None = None, provider=None) -> FastAPI:
         app.state.search_permissions[rid] = False
         app.state.store.event(sid, rid, "search_disabled", "검색을 껐습니다. 이후 도착하는 검색 결과는 사용하지 않습니다.")
         return {"search_allowed": False}
+
+    @app.get("/p5/projects/{pid}/sessions/{sid}/runs/{rid}")
+    async def run_metadata(pid: str, sid: str, rid: str):
+        app.state.store.session(pid, sid, owner)
+        result = app.state.store.one("SELECT id,status,created_at,error_code,delivery FROM runs WHERE id=? AND session_id=?", (rid, sid))
+        if not result:
+            raise HTTPException(404)
+        return result
 
     @app.post("/p5/projects/{pid}/sessions/{sid}/runs/{rid}/stop")
     async def stop_run(pid: str, sid: str, rid: str):

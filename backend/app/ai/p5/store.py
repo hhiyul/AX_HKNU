@@ -32,7 +32,7 @@ class Store:
         CREATE TABLE IF NOT EXISTS sessions(id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, active_run TEXT, capsule TEXT, capsule_ids TEXT, capsule_sources TEXT, capsule_rev INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, source_ids TEXT NOT NULL, ordinal INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS events(session_id TEXT NOT NULL, run_id TEXT NOT NULL, seq INTEGER NOT NULL, kind TEXT NOT NULL, content TEXT NOT NULL, PRIMARY KEY(session_id,run_id,seq));
-        CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, error_code TEXT, delivery TEXT);
         CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY, project_id TEXT NOT NULL, name TEXT NOT NULL, body BLOB NOT NULL, revision INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS attachments(session_id TEXT NOT NULL, file_id TEXT NOT NULL, active INTEGER NOT NULL, encoding TEXT NOT NULL, PRIMARY KEY(session_id,file_id));
         CREATE TABLE IF NOT EXISTS candidates(id TEXT PRIMARY KEY, project_id TEXT NOT NULL, session_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, manifest TEXT NOT NULL, saved_doc TEXT);
@@ -40,6 +40,10 @@ class Store:
         CREATE TABLE IF NOT EXISTS project_records(project_id TEXT PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, revision INTEGER NOT NULL);
         CREATE UNIQUE INDEX IF NOT EXISTS one_session_per_project ON sessions(project_id);
         """)
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(runs)")}
+        for column in ("error_code", "delivery"):
+            if column not in columns:
+                self.db.execute(f"ALTER TABLE runs ADD COLUMN {column} TEXT")
         self.db.commit()
 
     def close(self):
@@ -93,14 +97,23 @@ class Store:
             cur = self.db.execute("UPDATE sessions SET active_run=? WHERE id=? AND active_run IS NULL AND deleted=0", (rid, sid))
             if cur.rowcount != 1:
                 raise StoreError("RUN_ACTIVE")
-            self.db.execute("INSERT INTO runs VALUES(?,?,?,?)", (rid, sid, "running", now()))
+            self.db.execute("INSERT INTO runs(id,session_id,status,created_at) VALUES(?,?,?,?)", (rid, sid, "running", now()))
         return rid
 
-    def finish_run(self, sid, rid, status):
+    def finish_run(self, sid, rid, status, error_code=None, delivery=None):
         with self.lock, self.db:
-            self.db.execute("UPDATE runs SET status=? WHERE id=? AND session_id=?", (status, rid, sid))
-            if status != "unknown":
-                self.db.execute("UPDATE sessions SET active_run=NULL WHERE id=? AND active_run=?", (sid, rid))
+            self.db.execute("UPDATE runs SET status=?,error_code=?,delivery=? WHERE id=? AND session_id=?", (status, error_code, delivery, rid, sid))
+            self.db.execute("UPDATE sessions SET active_run=NULL WHERE id=? AND active_run=?", (sid, rid))
+
+    def recover_orphans(self):
+        # Single-process prototype: startup means no local task can still commit.
+        with self.lock, self.db:
+            rows = self.db.execute("SELECT r.id,r.session_id,r.status FROM runs r JOIN sessions s ON s.active_run=r.id WHERE r.status IN ('running','unknown')").fetchall()
+            for row in rows:
+                self.db.execute("UPDATE runs SET status='unknown',error_code=COALESCE(error_code,?),delivery=COALESCE(delivery,'unknown') WHERE id=?", ('PROCESS_RESTART' if row['status'] == 'running' else 'PROVIDER_OUTCOME_UNKNOWN', row['id']))
+                self.db.execute("UPDATE sessions SET active_run=NULL WHERE id=? AND active_run=?", (row['session_id'], row['id']))
+                seq = self.db.execute("SELECT COALESCE(MAX(seq),0)+1 FROM events WHERE session_id=? AND run_id=?", (row['session_id'], row['id'])).fetchone()[0]
+                self.db.execute("INSERT INTO events VALUES(?,?,?,?,?)", (row['session_id'], row['id'], seq, 'outcome_unknown', '이전 요청의 원격 결과는 확인되지 않았습니다. 대화는 계속 사용할 수 있습니다.'))
 
     def record(self, project_id):
         row = self.one("SELECT title,body,revision FROM project_records WHERE project_id=?", (project_id,))
