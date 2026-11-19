@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from bson import ObjectId
 
 
@@ -182,3 +184,31 @@ async def test_permanent_delete_removes_everything_under_it(client, login, db):
     assert await db["items"].count_documents({}) == 6
     assert (await client.get(other_url)).json()["chip_refs"] == []
     assert (await client.get(url)).status_code == 404
+
+
+async def test_permanent_delete_blocked_by_running_ai_run(client, login, db):
+    me = await login(client)
+    project = await create_project(client)
+    url = f"/projects/{project['id']}"
+    now = datetime.now(timezone.utc)
+    run = {"user_id": ObjectId(me["id"]), "project_id": ObjectId(project["id"]), "status": "running",
+           "created_at": now, "updated_at": now}
+    run_id = (await db.ai_runs.insert_one(run)).inserted_id
+    assert (await client.delete(url)).status_code == 204
+    res = await client.delete(url, params={"permanent": "true"})
+    assert res.status_code == 409 and res.json()["code"] == "PROJECT_IN_USE"
+    await db.ai_runs.update_one({"_id": run_id}, {"$set": {"status": "completed"}})
+    assert (await client.delete(url, params={"permanent": "true"})).status_code == 204
+    assert await db.ai_runs.count_documents({}) == 0
+
+
+async def test_permanent_delete_reaps_dead_run(client, login, db):
+    me = await login(client)
+    project = await create_project(client)
+    url = f"/projects/{project['id']}"
+    stale = datetime.now(timezone.utc) - timedelta(seconds=61)
+    run = {"user_id": ObjectId(me["id"]), "project_id": ObjectId(project["id"]), "status": "running",
+           "heartbeat_at": stale, "created_at": stale, "updated_at": stale}
+    await db.ai_runs.insert_one(run)
+    assert (await client.delete(url)).status_code == 204
+    assert (await client.delete(url, params={"permanent": "true"})).status_code == 204

@@ -67,6 +67,8 @@ const PRESETS = [
   ['채팅', [
     ['메시지 보내기', 'POST', '/projects/{project_id}/messages', { content: '상품 아이디어 좀' }],
     ['메시지 목록', 'GET', '/projects/{project_id}/messages'],
+    ['AI 답변 요청', 'POST', '/projects/{project_id}/runs', { text: '이 상품의 고객을 정리해 줘' }],
+    ['실행 상태', 'GET', '/projects/{project_id}/runs/{run_id}'],
   ]],
   ['파일·작업·OpenAI', [
     ['브랜드 파일', 'GET', '/assets?brand_id={brand_id}'],
@@ -78,7 +80,7 @@ const PRESETS = [
   ]],
 ]
 
-const ID_FIELDS = ['brand_id', 'project_id', 'asset_id']
+const ID_FIELDS = ['brand_id', 'project_id', 'asset_id', 'run_id']
 
 function idFieldFor(path) {
   // /projects/{id}/items 같은 하위 자료의 id는 기억하지 않는다.
@@ -88,7 +90,7 @@ function idFieldFor(path) {
 }
 
 export default function App() {
-  const [ids, setIds] = useState({ brand_id: '', project_id: '', asset_id: '' })
+  const [ids, setIds] = useState({ brand_id: '', project_id: '', asset_id: '', run_id: '' })
   const [method, setMethod] = useState('GET')
   const [path, setPath] = useState('/auth/me')
   const [body, setBody] = useState('')
@@ -115,6 +117,10 @@ export default function App() {
     const field = idFieldFor(label.split(' ')[1] || '')
     if (field && data && typeof data === 'object' && !Array.isArray(data) && data.id) {
       setIds((prev) => ({ ...prev, [field]: data.id }))
+    }
+    // AI 답변 요청은 run_id를 돌려준다.
+    if (data && typeof data === 'object' && data.run_id) {
+      setIds((prev) => ({ ...prev, run_id: data.run_id }))
     }
     setLog((prev) => [{ label, status: response.status, data, at: new Date().toLocaleTimeString() }, ...prev])
   }

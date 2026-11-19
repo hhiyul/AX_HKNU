@@ -8,6 +8,9 @@ from app.schemas.common import Amount, LongText, PlanKey, RequestModel, Revision
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 Step = Annotated[str, Field(min_length=1, max_length=50)]
 IdList = Annotated[list[str], Field(max_length=50)]
+# AI가 함께 읽는 참고 프로젝트는 5개까지
+MAX_CHIP_REFS = 5
+ChipRefs = Annotated[list[str], Field(max_length=MAX_CHIP_REFS)]
 # 진행 단계. 사용자가 직접 바꾸며 작성률에 따라 자동으로 바뀌지 않는다.
 Stage = Literal["planning", "prototype", "ready", "selling"]
 # active 진행 중, archived 보관함, trash 휴지통
@@ -56,7 +59,7 @@ class ProjectUpdate(RequestModel):
     # AI 채팅 설정: 웹 검색 사용, 참고할 내 파일, 읽기 전용으로 참고할 다른 프로젝트
     search_enabled: bool = None
     file_refs: IdList = None
-    chip_refs: IdList = None
+    chip_refs: ChipRefs = None
 
 
 class ProjectOut(BaseModel):

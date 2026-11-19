@@ -5,7 +5,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
 from app.schemas.projects import ProjectCreate, ProjectUpdate
-from app.services import items
+from app.services import ai_runs, items
 from app.services.store import (
     conflict,
     get_owned_brand,
@@ -20,7 +20,7 @@ from app.services.store import (
 from app.storage import delete_file
 
 # 프로젝트에 딸린 자료. 프로젝트를 완전히 지우면 함께 지운다.
-CHILD_COLLECTIONS = ["items", "cost_sheets", "messages"]
+CHILD_COLLECTIONS = ["items", "cost_sheets", "messages", "ai_runs"]
 STAGE_LABELS = {"planning": "기획", "prototype": "시제품", "ready": "판매 준비", "selling": "판매 중"}
 NO_BRAND = "none"
 
@@ -144,7 +144,12 @@ async def delete_project(db: AsyncDatabase, user_id: ObjectId, project_id: str, 
     if not project.get("deleted_at"):
         raise AppError(409, "NOT_IN_TRASH", "휴지통에 있는 프로젝트만 완전히 삭제할 수 있습니다.")
     ident = {"project_id": project["_id"]}
-    await remove_jobs(db, ident, AppError(409, "PROJECT_IN_USE", "프로젝트에 진행 중인 작업이 있습니다."))
+    in_use = AppError(409, "PROJECT_IN_USE", "프로젝트에 진행 중인 작업이 있습니다.")
+    # 서버가 꺼지며 남은 실행이 완전 삭제를 계속 막지 않게 먼저 정리한다.
+    await ai_runs.reap_stale(db, project["_id"])
+    if await db.ai_runs.find_one({**ident, "status": "running"}):
+        raise in_use
+    await remove_jobs(db, ident, in_use)
     # 브랜드에도 속한 파일은 남기고 연결만 푼다. 프로젝트에만 속한 파일은 지운다.
     await db.assets.update_many({**ident, "brand_id": {"$ne": None}}, {"$set": {"project_id": None}})
     async for asset in db.assets.find(ident):

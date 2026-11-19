@@ -40,6 +40,13 @@ async def owned_project(
     return project
 
 
+async def owned_any_project(
+    project_id: str, user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)
+) -> dict:
+    """내 프로젝트인지만 확인한다. 보관함·휴지통에 있어도 된다(AI 실행 상태 보기·중지용)."""
+    return await get_owned_project(db, user["_id"], project_id)
+
+
 class Workspace:
     """프로젝트 하위 API가 공통으로 쓰는 묶음: 로그인 사용자, DB, 내 프로젝트."""
 

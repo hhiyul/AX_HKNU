@@ -37,6 +37,9 @@ Docker만 있으면 됩니다.
    | `MONGO_DETAILS` | Atlas 연결 문자열. DB 이름을 빼면 `ax_platform`을 씁니다. |
    | `JWT_SECRET` | 로그인 토큰 서명 키. 비어 있으면 로그인 API가 503을 돌려줍니다. 만드는 명령은 `.env.example`에 있습니다. |
    | `COOKIE_SECURE` | HTTPS로 배포할 때만 `true` |
+   | `AI_PROVIDER` | `demo`(기본, 실제 호출 없는 모의 응답) 또는 `openai`(실제 호출, 비용 발생) |
+   | `OPENAI_API_KEY` | `AI_PROVIDER=openai`일 때 쓰는 키 |
+   | `OPENAI_MODEL` | 기본 `gpt-6-luna` |
 
 2. 컨테이너를 띄웁니다.
    ```bash
@@ -82,7 +85,8 @@ users (사용자)
  │   ├─ items                        프로젝트에 저장하는 글. kind로 구분한다
  │   │                                 plan 상품기획 6개 항목 · record AI와 함께 정리한 내용 · document 산출물
  │   ├─ cost_sheets                  경제성 입력값(프로젝트당 하나). 비교 결과는 조회할 때 계산한다
- │   └─ messages                     AI 채팅 메시지
+ │   ├─ messages                     AI 채팅 메시지
+ │   └─ ai_runs                      AI 채팅 실행 기록(상태, 실패 사유, 토큰 사용량). 진행 중 잠금은 projects.active_run
  ├─ assets (파일)                    brand_id, project_id 중 하나 이상
  ├─ ai_jobs (AI 작업)
  └─ requests                         중복 요청 방지 기록 (7일 뒤 자동 삭제)
@@ -117,7 +121,8 @@ users (사용자)
 | AI 맥락 | `GET /projection?sections=` | 파이프라인에 넘길 프로젝트 내용과 `bundle_revision` |
 | 글 | `GET·POST /items/{kind}`, `GET·PUT·DELETE /items/{kind}/{key}`, `DELETE /items/document/{key}/draft` | `kind`는 `plan`, `record`, `document`. AI 답변 저장은 `POST`에 `message_id`를 넣습니다 |
 | 경제성 | `GET·PUT /economics`, `POST /economics/baseline`, `POST /economics/confirm` | 입력 저장, 비교 기준 저장, 판매가 결정(`plan/ck_05`에 반영) |
-| AI 채팅 | `GET·POST /messages` | 사용자 메시지 저장만. 답변 생성은 파이프라인 |
+| AI 채팅 | `GET·POST /messages` | 메시지 목록과, AI 답변 없이 사용자 메시지만 저장 |
+| AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다 |
 
 요청과 응답의 정확한 필드는 Swagger(`http://localhost:8000/docs`)에서 확인하세요.
 
@@ -231,7 +236,7 @@ backend/
 
 ## 아직 없는 것
 
-- **AI 생성과 챗봇 답변**: 파이프라인 코드를 받아 백엔드에 이식할 예정입니다. 저장 구조는 준비돼 있습니다. 답변은 `services/chat.py`의 `add_message(role="ASSISTANT", doc=문서 초안)`, 다음에 해야 할 일은 프로젝트의 `next_action`, 글 저장은 `services/items.py`의 `save_item`·`create_item`, 프로젝트 내용은 `services/overview.py`의 `get_projection`을 쓰면 됩니다.
+- **AI 채팅**: 조원 파이프라인의 엔진을 `app/ai/`로 옮겨 1단계(채팅 답변: 스트리밍, 긴 대화 압축, 기획 항목·참고 프로젝트 읽기, 중지, 사용량)를 붙였습니다. 설계는 `docs/superpowers/specs/2026-11-19-ai-chat-run-design.md`. 웹 검색(2단계), 문서 초안과 내보내기(3단계), 첨부 파일은 아직입니다. 다음에 해야 할 일(`next_action`)도 아직 채우지 않습니다.
 - **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·프로젝트당 20개·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
 - **`ai_jobs.job_type`**: 작업이 다루는 기획 항목 `ck_01`~`ck_06` 중 하나입니다. `brand_id`는 선택이라 브랜드 없는 프로젝트의 작업도 만들 수 있습니다. 6개에 들지 않는 작업(`others`와 상세 문자열)은 아직 정하지 않았습니다.
 - **실제 화면**: `front/src/App.jsx`는 임시입니다.

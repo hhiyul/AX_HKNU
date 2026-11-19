@@ -2,14 +2,15 @@
 import os
 from datetime import datetime, timezone
 
+import pytest
 from bson import ObjectId
 from pymongo import MongoClient
+from pymongo.errors import WriteError
 
-from conftest import load_init_db
+import init_db
 
 
 def test_migrate_fills_missing_plan_items_as_skipped(db):
-    init_db = load_init_db()
     now = datetime.now(timezone.utc)
     user_id, project_id = ObjectId(), ObjectId()
     with MongoClient(os.environ["MONGO_DETAILS"]) as client:
@@ -28,3 +29,11 @@ def test_migrate_fills_missing_plan_items_as_skipped(db):
     assert sorted(plan) == [f"ck_0{n}" for n in range(1, 7)]
     assert (plan["ck_01"]["content"], plan["ck_01"]["revision"]) == ("칠보 팔찌", 3)
     assert (plan["ck_02"]["content"], plan["ck_02"]["revision"], plan["ck_02"]["user_id"]) == ("", 1, user_id)
+
+
+async def test_ai_runs_rules(db):
+    now = datetime.now(timezone.utc)
+    run = {"user_id": ObjectId(), "project_id": ObjectId(), "created_at": now, "updated_at": now}
+    with pytest.raises(WriteError):
+        await db.ai_runs.insert_one({**run, "status": "queued"})
+    await db.ai_runs.insert_one({**run, "status": "running", "user_message_id": None})

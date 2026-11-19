@@ -360,3 +360,10 @@ async def test_projection_sections_and_bundle_revision(client, url):
     assert after["bundle_revision"] != part["bundle_revision"]
     assert after["sections"]["ck_01"]["content"] == "칠보 팔찌"
     assert (await client.get(f"{url}/projection", params={"sections": "nope"})).status_code == 422
+
+
+async def test_chip_refs_limited_to_five(client, url):
+    others = [(await client.post("/projects", json={"name": f"참고 {n}"})).json()["id"] for n in range(6)]
+    res = await client.patch(url, json={"chip_refs": others, "revision": 1})
+    assert res.status_code == 422 and res.json()["code"] == "VALIDATION_ERROR"
+    assert (await client.patch(url, json={"chip_refs": others[:5], "revision": 1})).status_code == 200
