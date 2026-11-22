@@ -111,7 +111,7 @@ async def test_history_uses_capsule_when_all_covered_present(client, db, me):
     history, revision = await ai_context.load_history(db, ObjectId(pid), current)
     assert history[0] == {
         "id": "capsule", "role": "user", "content": history_summary_text("a와 b 요약"),
-        "covered_ids": [str(a), str(b)],
+        "covered_ids": [str(a), str(b)], "source_ids": [],
     }
     assert [m["content"] for m in history[1:]] == ["c"]
     assert revision == 2

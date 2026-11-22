@@ -39,11 +39,21 @@ def detect_mime_type(data: bytes, declared_type: str | None, file_name: str = ""
     claims_text = (declared_type or "").startswith("text/") or extension in ("txt", "md")
     if not data or not claims_text or b"\x00" in data:
         return None
-    try:
-        data.decode("utf-8")
-    except UnicodeDecodeError:
+    if decode_text(data) is None:
         return None
     return "text/markdown" if extension == "md" else "text/plain"
+
+
+def decode_text(data: bytes) -> str | None:
+    """UTF-8(BOM 포함)을 먼저, 안 되면 한글 윈도 메모장의 CP949로 읽는다. 둘 다 안 되면 None."""
+    for encoding in ("utf-8-sig", "cp949"):
+        try:
+            text = data.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if "\x00" not in text:
+            return text
+    return None
 
 
 def clean_file_name(name: str | None) -> str:

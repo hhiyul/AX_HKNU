@@ -219,3 +219,47 @@ SSE 사건 종류는 파이프라인 이름을 따른다: `started`, `context_us
 - 참고 프로젝트 최대 5개, 휴지통·보관함 프로젝트 제외, 도구 키 `ref:<id>:<섹션>`.
 
 만드는 사람에게 맡기는 것: 실행 함수를 나누는 방식, SSE 대기열 구현 세부, 오류 문구.
+
+---
+
+## 2·3단계 추가 (2026-11-22)
+
+사용자가 "확인 없이 이어서 진행하고 마지막에 알려 달라"고 해서, 아래는 Claude가 정하고 구현한 것이다.
+
+### 2단계: 웹 검색
+
+- 검색 허용은 프로젝트의 `search_enabled`(기존 `PATCH /projects/{id}`)를 쓴다. 꺼져 있으면 검색 도구를 주지 않는다.
+- 도구 두 개(조원 파이프라인 그대로): `web_search_generalized`는 정해진 일반 개념(`app/ai/search_policy.py`)만, `web_search`는 이번 요청의 `public_search_terms`(최대 500자)에 있는 단어만 쓴다. 범위를 벗어나면 검색하지 않고 AI에게 `SEARCH_NOT_ALLOWED`와 허용 범위를 돌려줘 다시 고르게 한다(한국어 조사가 붙은 단어 때문에 실행 전체가 실패하지 않게, 최종 리뷰 후 변경).
+- 실행 중 검색 끄기: 파이프라인의 `/search-off` 대신, 검색 직전과 결과가 온 뒤에 프로젝트의 `search_enabled`를 다시 읽는다. 꺼졌으면 결과를 버리고(`SEARCH_DISABLED`) 검색 도구를 뺀다. 서버가 여럿이어도 동작한다.
+- 확인된 검색 실패는 `SEARCH_FAILED`를 AI에게 돌려주고 대화는 계속한다. 결과를 모르는 실패는 실행 전체가 `unknown`.
+- 사용량에 `web_search` 호출 수와 토큰이 들어간다.
+
+### 3단계: 문서 초안과 내보내기
+
+- `POST /runs`에 `mode`(`auto` 기본, `chat`, `document`)와 `include_session`(기본 false)을 받는다.
+- 문서 모드가 되는 경우: `mode=document`, `auto`에서 문서 요청으로 판별(파이프라인 규칙 그대로), `auto`에서 AI가 `route_document`를 부른 경우. 검색만 요청한 글에는 `route_document`를 주지 않고, 그래도 부르면 거절을 돌려준 뒤 대화로 답하게 한다. `chat`이면 문서로 가지 않는다.
+- 문서 모드는 `include_session`일 때만 이전 대화를 넣는다(파이프라인 규칙).
+- `route_document`로 넘어가면 그때까지 흘러나온 글은 버리고 다시 만든다. 화면은 `document_route` 사건을 받으면 지금까지 받은 글을 지워야 한다.
+- 끝까지 만든 문서만 메시지의 `doc`에 `{title, content}`로 남긴다. 제목은 첫 Markdown 제목 줄, 없으면 "생성 문서". 사건 `document_candidate`에 메시지 id가 온다. 저장은 기존 "산출물로 저장"(`POST /items/document` + `message_id`)을 쓴다. 중지·실패로 끊긴 문서는 대화 답변으로만 남는다.
+- 내보내기: `GET /projects/{id}/items/document/{key}/export/{md|txt}`(저장된 산출물), `GET /projects/{id}/plan-export/{md|txt}`(6개 항목과 AI와 함께 정리한 내용). 임시 저장은 넣지 않는다. TXT는 Markdown을 글로 바꾸고 링크는 "글 (주소)"로 남긴다(`markdown` 패키지 추가).
+
+### 넣지 않은 것
+
+- DOCX·PDF 내보내기: Pandoc과 LibreOffice를 서버 이미지에 넣어야 해서 미룬다.
+- 기존 산출물을 참고해 문서 만들기(파이프라인의 `reference_document`), 문서가 어느 자료로 만들어졌는지 기록(manifest)과 변경 확인: 미룬다.
+- 첨부 파일, AI 기록 검토안 도구(`propose_record`): 미룬다.
+
+---
+
+## 4단계: 남은 파이프라인 기능 (2026-11-22, 목요일 UT 대비)
+
+사용자가 "안 된 것 다 해야 한다, 목요일 UT"라고 해서 Claude가 정하고 구현했다.
+
+- **참고 파일(첨부)**: 따로 첨부 저장소를 만들지 않고 기존 `assets`를 쓴다. 프로젝트의 `file_refs`(참고할 내 파일)와 이번 요청의 `asset_ids` 중 TXT·MD·DOCX를 글로 읽어 `file:<id>` 섹션으로 넘긴다. 최대 10개, 파일당 50,000자(넘으면 자르고 표시). 이미지는 읽지 않는다. 글 파일 업로드는 UTF-8 외에 한글 윈도 메모장(CP949)도 받는다. 읽기 도구는 `attachments`·`files`·파일 이름으로도 고를 수 있다.
+- **참고에서 뺀 파일**(파이프라인 규칙): AI 답변에 읽은 파일(`source_ids`)을 남긴다. 그 파일을 참고에서 빼고 대화에 붙인 적도 없거나, 파일을 지우면 그 답변과 그 파일을 읽은 압축 요약은 이후 대화에 넣지 않는다. 대화에 한 번 붙인 파일은 지우기 전까지 쓸 수 있는 파일로 본다(다음 질문에서 앞 답변이 사라지지 않게). 원본 파일은 지우지 않는다. 읽는 파일은 이번에 붙인 파일이 먼저이고, 글로 읽을 수 있는 파일만 세어 10개까지.
+- **AI와 함께 정리한 내용**: 최근 20개를 `record:<key>` 섹션으로 AI에게 넘긴다(파이프라인은 기록을 맥락에 넣었다).
+- **기록 검토안(`propose_record`)**: 대화 모드에서만 준다. AI는 검토안만 만들고(`record_candidate` 사건, 답변 메시지의 `record_draft`) 아무것도 저장하지 않는다. "검수하고 저장하기"(`POST /items/record` + `message_id`)에서 제목·내용을 비우면 검토안을 쓴다. 사용자가 정한 "검수 후 저장" 흐름은 그대로다.
+- **기존 산출물 참고**: `mode=document`일 때 `reference_document`(산출물 key)와 선택 `reference_body`(저장하지 않은 편집 중인 글). 다른 모드면 422 `REFERENCE_REQUIRES_DOCUMENT_MODE`, 본문만 보내면 422 `REFERENCE_REQUIRED`.
+- **문서 출처와 변경 확인**: 끝까지 만든 문서의 `doc.sources`에 기획 항목·정리 내용·참고 산출물(revision), 참고 파일, 검색 주소를 남기고, 산출물로 저장하면 `items.sources`로 옮긴다. `GET /items/document/{key}/changes`가 각 출처의 `unchanged`·`changed`·`unavailable`을 돌려준다. 참고 프로젝트 자료는 출처에 넣지 않는다.
+- **DOCX·PDF**: 서버 이미지에 Pandoc, LibreOffice(writer), 한글 글꼴(Noto CJK)을 넣었다. Debian의 Pandoc 2.17은 `--sandbox`로 돌리면 실패해서, 대신 Lua 필터로 Pandoc이 읽은 문서의 이미지를 모두 글로 바꾸고 원시 HTML을 꺼 서버 파일·외부 주소를 읽어 넣지 못하게 했다(최종 리뷰에서 정규식 방식의 우회를 찾아 바꿈). Pandoc·LibreOffice는 빈 임시 폴더에서 최소 환경 변수로 돌리고, 동시에 2개까지만 변환한다. 변환 도구가 없거나 실패하면 503(원본은 그대로). 산출물과 저장된 기획 모두 md·txt·docx·pdf.
+- **작은 손질**: 문서 제목에서 강조 기호·링크 주소를 빼고 코드 블록 안 제목은 쓰지 않는다. TXT에 스크립트·스타일 내용을 넣지 않는다. 검색한 뒤 문서로 넘어가도 검색 결과는 남긴다. 허용 검색어를 벗어나면 실행을 끝내지 않고 AI가 다시 고르게 한다. `include_session`을 비우면 이전 대화를 넣는다(문서 모드 포함, UT 사용성 때문에 파이프라인 기본값과 다르게 함). `false`면 대화 없이 만든다. 문서 답변에는 기록 검토안을 붙이지 않는다. 서버를 끌 때 진행 중인 실행을 중지해 잠금을 푼다.

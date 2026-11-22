@@ -132,7 +132,7 @@ async def test_empty_text_rejected(client, url, use_runtime):
     use_runtime(FakeProvider([]))
     res = await client.post(f"{url}/runs", json={"text": ""})
     assert res.status_code == 422
-    assert (await client.post(f"{url}/runs", json={"text": "x", "mode": "document"})).status_code == 422
+    assert (await client.post(f"{url}/runs", json={"text": "x", "mode": "report"})).status_code == 422
 
 
 async def test_stream_headers_and_last_event_id(client, url, use_runtime):
@@ -154,3 +154,9 @@ async def test_startup_reap_survives_unreachable_db(monkeypatch, caplog):
     with caplog.at_level("ERROR"):
         await main.reap_stale_runs()
     assert "no atlas" in caplog.text
+
+
+async def test_whitespace_only_text_rejected(client, url, use_runtime):
+    use_runtime(FakeProvider([]))
+    res = await client.post(f"{url}/runs", json={"text": "   \n "})
+    assert res.status_code == 422

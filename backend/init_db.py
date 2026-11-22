@@ -135,6 +135,8 @@ COLLECTIONS = {
             "message_id": ["objectId"],
             # 산출물 편집기의 임시 저장
             "draft": ["object"],
+            # AI가 만든 산출물의 출처 목록
+            "sources": ["array"],
         },
     ),
     # 경제성 입력. 프로젝트당 문서 하나. cost는 지금 입력한 값, base는 변경 전 비교 기준이다.
@@ -153,7 +155,8 @@ COLLECTIONS = {
             "created_at": "date",
         },
         # doc은 AI가 만든 문서 초안, record_key와 doc_key는 이 답변에서 저장한 글
-        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"]},
+        # source_ids는 AI 답변이 읽은 참고 파일
+        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"], "source_ids": ["array"], "record_draft": ["object"]},
     ),
     # 중복 요청 방지 기록. 7일 뒤 자동으로 지워진다.
     "requests": build_schema(

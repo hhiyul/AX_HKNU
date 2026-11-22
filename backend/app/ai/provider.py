@@ -2,14 +2,15 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import AsyncIterator
 from urllib.parse import urlsplit
 
 import httpx
 
 from app.ai.responses import Delivery, ProviderError, parse_response
-from app.config import Settings
 from app.ai.usage import SearchResult, SummaryText, valid_usage
+from app.config import Settings
 
 BASE = "https://api.openai.com/v1/responses"
 
@@ -56,6 +57,12 @@ class OpenAIProvider:
             raise ProviderError("KEY_MISSING_OR_INVALID", Delivery.NOT_DISPATCHED)
         return {"Authorization": f"Bearer {self.key}"}
 
+    def _same_model(self, model) -> bool:
+        """설정한 모델이거나 그 날짜 붙은 스냅숏(예: 모델-2026-10-01)이면 같은 모델로 본다."""
+        if not isinstance(model, str):
+            return False
+        return model == self.model or re.fullmatch(re.escape(self.model) + r"-\d{4}-\d{2}-\d{2}", model) is not None
+
     async def _post(self, url: str, body: dict) -> dict:
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=90) as client:
@@ -64,6 +71,8 @@ class OpenAIProvider:
             raise ProviderError("CONNECTION_FAILED", Delivery.NOT_DISPATCHED) from None
         except httpx.HTTPError:
             raise ProviderError("TRANSPORT_ERROR", Delivery.UNKNOWN) from None
+        if r.status_code in (401, 403):
+            raise ProviderError("KEY_MISSING_OR_INVALID", Delivery.RESPONDED)
         if not r.is_success:
             raise ProviderError("PROVIDER_ERROR", Delivery.RESPONDED)
         try:
@@ -93,7 +102,7 @@ class OpenAIProvider:
         data = await self._post(BASE, body)
         try:
             result = parse_response(data)
-            if result.model != self.model:
+            if not self._same_model(result.model):
                 raise ProviderError("MODEL_MISMATCH", Delivery.RESPONDED)
         except ProviderError as exc:
             exc.usage = valid_usage(data.get("usage"))
@@ -106,6 +115,8 @@ class OpenAIProvider:
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=90) as client:
                 async with client.stream("POST", BASE, headers=self.headers(), json=body) as response:
+                    if response.status_code in (401, 403):
+                        raise ProviderError("KEY_MISSING_OR_INVALID", Delivery.RESPONDED)
                     if not response.is_success:
                         raise ProviderError("PROVIDER_ERROR", Delivery.RESPONDED)
                     data_lines = []
@@ -131,7 +142,7 @@ class OpenAIProvider:
                             yield {"type": "tool", "name": item.get("name"), "call_id": item.get("call_id"), "arguments": item.get("arguments")}
                         elif typ == "response.completed":
                             result = event.get("response")
-                            if not isinstance(result, dict) or result.get("status") != "completed" or result.get("model") != self.model:
+                            if not isinstance(result, dict) or result.get("status") != "completed" or not self._same_model(result.get("model")):
                                 raise ProviderError("INVALID_RESPONSE", Delivery.RESPONDED)
                             usage = valid_usage(result.get("usage"))
                             if usage is not None:
@@ -157,7 +168,7 @@ class OpenAIProvider:
         if await self.count(wire) + 16_000 > 1_050_000:
             raise ProviderError("MODEL_LIMIT_EXCEEDED", Delivery.NOT_DISPATCHED)
         data = await self._post(BASE, {**wire, "store": False, "max_output_tokens": 8000, "tool_choice": "required"})
-        if data.get("status") != "completed" or data.get("model") != self.model or not isinstance(data.get("output"), list):
+        if data.get("status") != "completed" or not self._same_model(data.get("model")) or not isinstance(data.get("output"), list):
             exc = ProviderError("INVALID_RESPONSE", Delivery.RESPONDED)
             exc.usage = valid_usage(data.get("usage"))
             raise exc

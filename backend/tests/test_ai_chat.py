@@ -84,7 +84,7 @@ async def test_read_tool_returns_plan_and_reference_sections(db, setup):
 @pytest.mark.parametrize(
     "call,code",
     [
-        ({"type": "tool", "name": "route_document", "call_id": "c1", "arguments": "{}"}, "TOOL_NOT_ALLOWED"),
+        ({"type": "tool", "name": "delete_documents", "call_id": "c1", "arguments": "{}"}, "TOOL_NOT_ALLOWED"),
         ({"type": "tool", "name": "read_project_sections", "call_id": None, "arguments": "{}"}, "TOOL_NOT_ALLOWED"),
         ({"type": "tool", "name": "read_project_sections", "call_id": "c1", "arguments": "{\"keys\": 3}"},
          "INVALID_TOOL_ARGUMENTS"),

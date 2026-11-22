@@ -119,7 +119,7 @@ async def test_capsule_conditional_save(db, project):
     run_id = await ai_runs.begin_run(db, project["user_id"], pid)
     assert await ai_runs.load_capsule(db, pid) is None
     assert await ai_runs.save_capsule(db, pid, run_id, 0, "요약", ["a", "b"]) == 1
-    assert await ai_runs.load_capsule(db, pid) == {"text": "요약", "covered_ids": ["a", "b"], "revision": 1}
+    assert await ai_runs.load_capsule(db, pid) == {"text": "요약", "covered_ids": ["a", "b"], "source_ids": [], "revision": 1}
     with pytest.raises(ContextError, match="CAPSULE_CONFLICT"):
         await ai_runs.save_capsule(db, pid, run_id, 0, "늦은 요약", ["a"])
     with pytest.raises(ContextError, match="CAPSULE_CONFLICT"):

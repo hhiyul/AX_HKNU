@@ -22,7 +22,10 @@ router = APIRouter(prefix="/projects/{project_id}/runs", tags=["ai"])
 @router.post("", response_model=schema.RunStarted, status_code=202)
 async def start_run(body: schema.RunCreate, ws: Workspace = Depends()):
     """사용자 메시지를 저장하고 AI 답변 만들기를 시작한다. 진행 중인 실행이 있으면 409 RUN_ACTIVE."""
-    run_id = await ai_chat.start_run(ws.db, get_runtime(), ws.user_id, ws.project, body.text)
+    run_id = await ai_chat.start_run(
+        ws.db, get_runtime(), ws.user_id, ws.project, body.text, body.public_search_terms,
+        body.mode, body.include_session, body.asset_ids, body.reference_document, body.reference_body,
+    )
     return {"run_id": str(run_id)}
 
 

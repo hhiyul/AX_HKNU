@@ -1,7 +1,10 @@
 """AI 채팅 실행: 사용자 메시지를 받아 AI 답변을 스트리밍으로 만들고 채팅에 저장한다.
 
-조원 파이프라인(P5 server.py의 run_task)을 우리 저장 구조에 맞게 옮긴 것이다. 1단계라 웹 검색,
-문서 초안, 첨부, 기록 검토안 도구는 없고 섹션 읽기 도구 하나만 쓴다.
+조원 파이프라인(P5 server.py의 run_task)을 우리 저장 구조에 맞게 옮긴 것이다. 도구(섹션 읽기, 웹 검색,
+문서로 넘기기)는 services/ai_tools.py에 있다. 첨부 파일과 기록 검토안 도구는 없다.
+
+문서 모드(mode="document", 자동 판별, 또는 AI가 route_document를 부른 경우)에서 끝까지 만든 답변은
+메시지의 doc에 {title, content}로 남는다. 사용자가 "산출물로 저장"을 누르면 산출물이 된다.
 """
 import asyncio
 import contextlib
@@ -27,7 +30,8 @@ from app.ai.provider import OpenAIProvider
 from app.ai.responses import Delivery, ProviderError
 from app.ai.runtime import Runtime
 from app.ai.usage import UsageTracker, valid_usage
-from app.services import ai_context, ai_runs, chat
+from app.errors import AppError
+from app.services import ai_context, ai_runs, ai_tools, chat, doc_sources, items
 from app.services.ai_runs import RunCheck
 
 logger = logging.getLogger(__name__)
@@ -42,8 +46,43 @@ REASONS = {
     "KEY_MISSING_OR_INVALID": "OpenAI 연결 설정을 확인해 주세요.",
     "CAPSULE_CONFLICT": "컨텍스트 저장이 충돌하여 요청을 중단했습니다.",
     "PROJECT_NOT_ACTIVE": "프로젝트가 보관함이나 휴지통으로 옮겨져 답변을 저장하지 않았습니다.",
+    "SEARCH_NOT_ALLOWED": "허용된 일반 개념 또는 공개 검색어 범위를 벗어나 검색을 중단했습니다.",
 }
 DEFAULT_REASON = "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요."
+DEFAULT_DOC_TITLE = "생성 문서"
+HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$")
+FENCE = re.compile(r"^\s{0,3}(```|~~~)")
+INLINE_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+INLINE_MARKS = re.compile(r"[*_`~]")
+
+
+def _search_turns(tail: list[dict]) -> list[dict]:
+    """문서로 넘어갈 때 앞서 받은 웹 검색 결과는 남겨서, 같은 검색을 다시 하지 않게 한다."""
+    calls = {
+        item["call_id"] for item in tail
+        if item.get("type") == "function_call" and item.get("name") in ai_tools.SEARCH_TOOL_NAMES
+    }
+    return [item for item in tail if item.get("call_id") in calls]
+
+
+def _clean_title(raw: str) -> str:
+    """제목에서 링크 주소와 강조 기호를 빼고 글만 남긴다."""
+    text = INLINE_LINK.sub(lambda match: match.group(1), raw)
+    return INLINE_MARKS.sub("", text).strip(" #\t")[:200]
+
+
+def _doc_title(text: str) -> str:
+    """답변의 첫 제목 줄(코드 블록 안은 빼고)을 문서 제목으로 쓴다. 없거나 비면 "생성 문서"."""
+    in_code = False
+    for line in text.splitlines():
+        if FENCE.match(line):
+            in_code = not in_code
+            continue
+        match = None if in_code else HEADING.match(line)
+        title = _clean_title(match.group(1)) if match else ""
+        if title:
+            return title
+    return DEFAULT_DOC_TITLE
 
 
 class _Halt(Exception):
@@ -54,26 +93,49 @@ class _Halt(Exception):
         super().__init__(state.value)
 
 
-async def start_run(db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project: dict, text: str) -> ObjectId:
-    """프로젝트를 잠그고 사용자 메시지를 저장한 뒤 백그라운드 실행을 시작한다."""
+async def start_run(
+    db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project: dict, text: str,
+    public_search_terms: str = "", mode: str = "auto", include_session: bool | None = None,
+    asset_ids: list[str] | None = None, reference_document: str | None = None, reference_body: str | None = None,
+) -> ObjectId:
+    """프로젝트를 잠그고 사용자 메시지를 저장한 뒤 백그라운드 실행을 시작한다.
+
+    public_search_terms는 이번 요청에서 웹 검색에 써도 되는 공개 검색어다(검색 허용이 켜져 있을 때만 쓴다).
+    mode는 auto(대화, 문서 요청이면 문서), chat(대화만), document(문서). 문서 모드는 include_session일 때만
+    이전 대화를 넣는다.
+    """
     project_id = project["_id"]
+    reference = await _reference(db, project_id, mode, reference_document, reference_body)
     run_id = await ai_runs.begin_run(db, user_id, project_id)
     try:
-        message = await chat.add_message(db, user_id, project_id, "USER", text)
+        message = await chat.add_message(db, user_id, project_id, "USER", text, asset_ids)
         await ai_runs.attach_user_message(db, run_id, message["_id"])
     except BaseException:
         await ai_runs.finish_run(db, run_id, project_id, "failed", "MESSAGE_SAVE_FAILED")
         raise
-    job = _RunJob(db, runtime, user_id, project_id, run_id, message["_id"], text)
+    job = _RunJob(
+        db, runtime, user_id, project_id, run_id, message["_id"], text, public_search_terms, mode, include_session,
+        message["asset_ids"], reference,
+    )
     runtime.tasks[str(run_id)] = asyncio.create_task(job.run())
     return run_id
 
 
-async def run_task(
-    db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project_id: ObjectId,
-    run_id: ObjectId, user_message_id: ObjectId, text: str,
-) -> None:
-    await _RunJob(db, runtime, user_id, project_id, run_id, user_message_id, text).run()
+async def _reference(
+    db: AsyncDatabase, project_id: ObjectId, mode: str, key: str | None, body: str | None
+) -> dict | None:
+    """문서 모드에서 참고할 기존 산출물. body가 있으면 저장하지 않은 편집 중인 글을 대신 쓴다."""
+    if key is None and body is None:
+        return None
+    if mode != "document":
+        raise AppError(422, "REFERENCE_REQUIRES_DOCUMENT_MODE", "기존 산출물 참고는 문서 모드에서만 쓸 수 있습니다.")
+    if key is None:
+        raise AppError(422, "REFERENCE_REQUIRED", "참고할 산출물을 골라 주세요.")
+    document = await items.get_item(db, project_id, "document", key)
+    return {
+        "kind": "reference_document", "id": key, "title": document["title"], "revision": document["revision"],
+        "content": document["content"] if body is None else body, "source": "saved" if body is None else "editor",
+    }
 
 
 async def stop_run(db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project_id: ObjectId, run_id: str) -> str:
@@ -159,16 +221,44 @@ class _TrackedProvider:
         finally:
             await self.tracker.finish("generation", usage, not_dispatched)
 
+    async def web_search(self, query: str):
+        await self.job.ensure_ok(force=True)
+        await self.tracker.start("web_search")
+        try:
+            result = await self.provider.web_search(query)
+        except BaseException as exc:
+            await self.tracker.finish("web_search", getattr(exc, "usage", None), _not_dispatched(exc))
+            if isinstance(exc, ProviderError) and exc.delivery == Delivery.UNKNOWN:
+                raise ContextError(UNKNOWN) from exc
+            raise
+        await self.tracker.finish("web_search", getattr(result, "usage", None))
+        return result
+
 
 def _not_dispatched(exc: BaseException) -> bool:
     return isinstance(exc, ProviderError) and exc.delivery == Delivery.NOT_DISPATCHED
 
 
 class _RunJob:
-    def __init__(self, db, runtime: Runtime, user_id, project_id, run_id, user_message_id, text: str):
+    def __init__(
+        self, db, runtime: Runtime, user_id, project_id, run_id, user_message_id, text: str,
+        public_search_terms: str = "", mode: str = "auto", include_session: bool | None = None,
+        asset_ids: list[ObjectId] | None = None, reference: dict | None = None,
+    ):
         self.db, self.runtime = db, runtime
+        self.reference = reference
+        self.sources: list[dict] = []
+        self.asset_ids = list(asset_ids or [])
+        # 이번 실행에서 AI에게 넘긴 참고 파일. 답변에 함께 남긴다.
+        self.source_ids: list[ObjectId] = []
         self.user_id, self.project_id, self.run_id = user_id, project_id, run_id
         self.user_message_id, self.text = user_message_id, text
+        self.public_search_terms = public_search_terms
+        self.mode = mode
+        # 정하지 않았으면 이전 대화를 넣는다(대화하다가 문서를 만드는 경우가 대부분이라서). false면 빼고 만든다.
+        self.include_session = include_session if include_session is not None else True
+        self.document_mode = False
+        self.toolbox: ai_tools.ToolBox | None = None
         self.key = str(run_id)
         self.pieces: list[str] = []
         self.status, self.error_code, self.delivery = "failed", None, None
@@ -232,22 +322,45 @@ class _RunJob:
         }))
 
     async def _prepare(self, sections: dict, history: list[dict], tail: list[dict]):
-        async def save_summary(text: str, covered_ids: list[str], _sources: list[str]) -> None:
+        async def save_summary(text: str, covered_ids: list[str], sources: list[str]) -> None:
             self.capsule_revision = await ai_runs.save_capsule(
-                self.db, self.project_id, self.run_id, self.capsule_revision, text, covered_ids
+                self.db, self.project_id, self.run_id, self.capsule_revision, text, covered_ids, sources
             )
 
+        prefix = ai_context.prefix_from(sections) + self.toolbox.extra_prefix
         prepared = await prepare(
-            self.provider, ai_context.prefix_from(sections), history, self.text, [ai_context.READ_TOOL],
-            self.emit, self.runtime.model, self.budget, save_summary, False, tail, self._observe_count,
+            self.provider, prefix, history, self.text, self.toolbox.tools,
+            self.emit, self.runtime.model, self.budget, save_summary, self.document_mode, tail, self._observe_count,
         )
         return prepared, _apply_prepared_history(history, prepared)
 
     async def _generate(self) -> None:
         project = await self.db.projects.find_one({"_id": self.project_id})
         sections = await ai_context.build_sections(self.db, project, self.user_id)
-        history, self.capsule_revision = await ai_context.load_history(self.db, self.project_id, self.user_message_id)
+        files = await ai_context.file_sections(self.db, project, self.user_id, self.asset_ids)
+        sections.update(files)
+        if self.reference:
+            sections["reference_document"] = self.reference
+        self.sections = sections
+        self.source_ids = [ObjectId(key.split(":", 1)[1]) for key in files]
+        active = await ai_context.active_file_ids(self.db, project, self.user_id, self.source_ids)
+        history, self.capsule_revision = await ai_context.load_history(
+            self.db, self.project_id, self.user_message_id, active
+        )
         await self.emit("context_ready", "프로젝트 자료와 이전 대화를 확인했습니다.")
+        self.document_mode = self.mode == "document" or (
+            self.mode == "auto" and ai_tools.is_document_request(self.text)
+        )
+        self.search_only = self.mode == "auto" and ai_tools.is_search_only_request(self.text)
+        can_search = bool(project.get("search_enabled")) and hasattr(self.runtime.provider, "web_search")
+        self.toolbox = ai_tools.ToolBox(
+            self.emit, self.provider, sections, can_search, self.public_search_terms, self._search_allowed,
+            route_offered=self.mode == "auto" and not self.document_mode and not self.search_only,
+            record_offered=not self.document_mode,
+        )
+        if self.document_mode:
+            history = self._document_history(history)
+            await self.emit("document_route", "문서 작성 작업으로 전달했습니다.")
         self.budget, tail = Budget(), []
         prepared, history = await self._prepare(sections, history, tail)
         await self.emit("generating", "답변을 생성하고 있습니다.")
@@ -255,7 +368,10 @@ class _RunJob:
             tool_calls = await self._stream_once(prepared.wire)
             if not tool_calls:
                 return
-            tail.extend(await self._tool_outputs(tool_calls, sections))
+            if any(call.get("name") == "route_document" for call in tool_calls):
+                history, tail = await self._route(tool_calls, history, tail)
+            else:
+                tail.extend(await self.toolbox.handle(tool_calls))
             prepared, history = await self._prepare(sections, history, tail)
         raise ContextError("TOOL_BUDGET_EXHAUSTED")
 
@@ -279,28 +395,41 @@ class _RunJob:
             raise ContextError(UNKNOWN)
         return tool_calls
 
-    async def _tool_outputs(self, tool_calls: list[dict], sections: dict) -> list[dict]:
-        tail = []
-        for call in tool_calls:
-            if call.get("name") != "read_project_sections" or not call.get("call_id"):
-                raise ContextError("TOOL_NOT_ALLOWED")
-            try:
-                args = json.loads(call.get("arguments") or "{}")
-            except (TypeError, ValueError):
-                raise ContextError("INVALID_TOOL_ARGUMENTS") from None
-            keys = args.get("keys") if isinstance(args, dict) else None
-            if not isinstance(keys, list) or any(not isinstance(key, str) for key in keys):
-                raise ContextError("INVALID_TOOL_ARGUMENTS")
-            await self.emit("tool_started", "프로젝트 정보를 조회하고 있습니다.")
-            result = ai_context.read_sections(sections, keys)
-            await self.emit("tool_finished", "프로젝트 정보 조회를 마쳤습니다.")
-            tail.extend([
-                {"type": "function_call", "name": call["name"], "call_id": call["call_id"],
-                 "arguments": call.get("arguments") or "{}"},
+    def _document_history(self, history: list[dict]) -> list[dict]:
+        """문서 모드는 이전 대화를 넣기로 한 경우에만 대화를 쓴다."""
+        return history if self.include_session else []
+
+    async def _route(self, calls: list[dict], history: list[dict], tail: list[dict]) -> tuple[list[dict], list[dict]]:
+        """AI가 문서 작성으로 넘기면 지금까지의 답변을 버리고 문서 모드로 다시 만든다."""
+        call = calls[0]
+        if len(calls) != 1 or not call.get("call_id"):
+            raise ContextError("TOOL_NOT_ALLOWED")
+        arguments = call.get("arguments") or "{}"
+        if self.search_only:
+            # 검색만 요청했는데 모델이 문서로 넘기려 하면 거절하고 대화로 답하게 한다.
+            return history, tail + [
+                {"type": "function_call", "name": "route_document", "call_id": call["call_id"], "arguments": arguments},
                 {"type": "function_call_output", "call_id": call["call_id"],
-                 "output": json.dumps(result, ensure_ascii=False, default=str)},
-            ])
-        return tail
+                 "output": json.dumps(ai_tools.ROUTE_REFUSED, ensure_ascii=False)},
+            ]
+        if "route_document" not in self.toolbox.names():
+            raise ContextError("TOOL_NOT_ALLOWED")
+        try:
+            if json.loads(arguments) != {}:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise ContextError("INVALID_TOOL_ARGUMENTS") from None
+        self.document_mode, self.pieces = True, []
+        self.toolbox.remove({"route_document", "propose_record"})
+        # 문서 답변에는 기록 검토안을 붙이지 않는다.
+        self.toolbox.record_draft = None
+        await self.emit("document_route", "문서 작성 작업으로 전달했습니다.")
+        return self._document_history(history), _search_turns(tail)
+
+    async def _search_allowed(self) -> bool:
+        """검색 허용은 실행 중에도 바뀔 수 있어 검색할 때마다 프로젝트에서 다시 읽는다."""
+        project = await self.db.projects.find_one({"_id": self.project_id}, {"search_enabled": 1})
+        return bool((project or {}).get("search_enabled"))
 
     async def _save_answer(self, completion: str) -> bool:
         """답변을 저장할 수 있는 상태일 때만 저장한다. 중지 요청 중이면 부분 답변으로 저장한다."""
@@ -308,10 +437,19 @@ class _RunJob:
         if state not in (RunCheck.OK, RunCheck.STOP_REQUESTED) or not "".join(self.pieces).strip():
             return False
         self.saving = True
+        text = "".join(self.pieces)
+        # 끝까지 만든 문서만 문서 초안으로 남긴다. 중간에 끊긴 문서는 대화 답변으로만 남는다.
+        doc = None
+        if self.document_mode and completion == "COMPLETE":
+            web_urls = self.toolbox.web_urls if self.toolbox else []
+            doc = {"title": _doc_title(text), "content": text, "sources": doc_sources.collect(self.sections, web_urls)}
         message = await chat.add_message(
-            self.db, self.user_id, self.project_id, "ASSISTANT", "".join(self.pieces), completion=completion
+            self.db, self.user_id, self.project_id, "ASSISTANT", text, completion=completion, doc=doc,
+            source_ids=self.source_ids, record_draft=self.toolbox.record_draft if self.toolbox else None,
         )
         self.assistant_message_id = message["_id"]
+        if doc:
+            await self.emit("document_candidate", str(message["_id"]))
         return True
 
     async def _save_partial(self, completion: str) -> None:

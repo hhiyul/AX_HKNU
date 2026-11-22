@@ -167,6 +167,7 @@ async def save_capsule(
     expected_revision: int,
     text: str,
     covered_ids: list[str],
+    source_ids: list[str] | None = None,
 ) -> int:
     """요약 번호와 실행 잠금이 맞을 때만 압축한 예전 대화를 바꾼다. 프로젝트 revision은 건드리지 않는다."""
     if expected_revision == 0:
@@ -176,7 +177,9 @@ async def save_capsule(
     revision = expected_revision + 1
     result = await db.projects.update_one(
         {"_id": project_id, "active_run": run_id, **matches_revision},
-        {"$set": {"chat_capsule": {"text": text, "covered_ids": covered_ids, "revision": revision}}},
+        {"$set": {"chat_capsule": {
+            "text": text, "covered_ids": covered_ids, "source_ids": list(source_ids or []), "revision": revision,
+        }}},
     )
     if not result.matched_count:
         raise ContextError("CAPSULE_CONFLICT")

@@ -134,8 +134,10 @@ class MessageOut(BaseModel):
     content: str
     asset_ids: list[str]
     completion: Literal["COMPLETE", "PARTIAL", "UNKNOWN"]
-    # AI가 만든 문서 초안 {title, content}
+    # AI가 만든 문서 초안 {title, content, sources}
     doc: dict[str, Any] | None = None
+    # AI가 만든 기록 검토안 {title, content}. "검수하고 저장하기"의 기본값
+    record_draft: dict[str, Any] | None = None
     # 이 답변에서 저장한 정리 내용과 산출물. 저장하지 않았으면 null.
     record_key: str | None = None
     doc_key: str | None = None

@@ -120,9 +120,11 @@ users (사용자)
 | 개요 | `GET /overview` | 작업실 홈에 필요한 것: 프로젝트(메모·최근 작업 포함), 기획 6개 항목 상태, 글·대화·파일 수, 확정 가격 |
 | AI 맥락 | `GET /projection?sections=` | 파이프라인에 넘길 프로젝트 내용과 `bundle_revision` |
 | 글 | `GET·POST /items/{kind}`, `GET·PUT·DELETE /items/{kind}/{key}`, `DELETE /items/document/{key}/draft` | `kind`는 `plan`, `record`, `document`. AI 답변 저장은 `POST`에 `message_id`를 넣습니다 |
+| 내보내기 | `GET /items/document/{key}/export/{md·txt·docx·pdf}`, `GET /plan-export/{md·txt·docx·pdf}` | 저장된 산출물, 또는 6개 항목과 AI와 함께 정리한 내용을 파일로 내려받습니다. 임시 저장은 넣지 않습니다. 변환 도구가 없으면 503 |
+| 문서 출처 | `GET /items/document/{key}/changes` | AI가 만든 산출물이 참고한 기획 항목·정리 내용·참고 산출물·참고 파일이 그 뒤 바뀌었는지(`unchanged`·`changed`·`unavailable`) |
 | 경제성 | `GET·PUT /economics`, `POST /economics/baseline`, `POST /economics/confirm` | 입력 저장, 비교 기준 저장, 판매가 결정(`plan/ck_05`에 반영) |
 | AI 채팅 | `GET·POST /messages` | 메시지 목록과, AI 답변 없이 사용자 메시지만 저장 |
-| AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다 |
+| AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다. 본문: `text`, `mode`(`auto`·`chat`·`document`), `include_session`, `public_search_terms`, `asset_ids`(이번에 붙인 파일), `reference_document`·`reference_body`(문서 모드에서 참고할 산출물). AI는 프로젝트의 참고 파일(`file_refs`)과 붙인 파일 중 TXT·MD·DOCX를 읽습니다. 기록 검토안은 `record_candidate` 사건과 답변의 `record_draft`로 옵니다. 웹 검색은 프로젝트의 `search_enabled`가 켜져 있을 때만 합니다. 문서 모드에서 끝까지 만든 답변은 메시지의 `doc`에 남고 `document_candidate` 사건이 옵니다. `document_route` 사건이 오면 그때까지 받은 글을 지우세요. `include_session`을 비우면 이전 대화를 넣고 문서를 만듭니다 |
 
 요청과 응답의 정확한 필드는 Swagger(`http://localhost:8000/docs`)에서 확인하세요.
 
@@ -236,7 +238,7 @@ backend/
 
 ## 아직 없는 것
 
-- **AI 채팅**: 조원 파이프라인의 엔진을 `app/ai/`로 옮겨 1단계(채팅 답변: 스트리밍, 긴 대화 압축, 기획 항목·참고 프로젝트 읽기, 중지, 사용량)를 붙였습니다. 설계는 `docs/superpowers/specs/2026-11-19-ai-chat-run-design.md`. 웹 검색(2단계), 문서 초안과 내보내기(3단계), 첨부 파일은 아직입니다. 다음에 해야 할 일(`next_action`)도 아직 채우지 않습니다.
+- **AI 채팅**: 조원 파이프라인의 엔진을 `app/ai/`로 옮겨 채팅 답변(스트리밍, 긴 대화 압축, 기획 항목·참고 프로젝트 읽기, 중지, 사용량), 웹 검색, 문서 초안과 TXT·MD 내보내기를 붙였습니다. 설계는 `docs/superpowers/specs/2026-11-19-ai-chat-run-design.md`. 참고 파일 읽기, 기록 검토안, 기존 산출물 참고, 문서 출처·변경 확인, DOCX·PDF 내보내기까지 붙였습니다(4단계). 다음에 해야 할 일(`next_action`)도 아직 채우지 않습니다.
 - **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·프로젝트당 20개·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
 - **`ai_jobs.job_type`**: 작업이 다루는 기획 항목 `ck_01`~`ck_06` 중 하나입니다. `brand_id`는 선택이라 브랜드 없는 프로젝트의 작업도 만들 수 있습니다. 6개에 들지 않는 작업(`others`와 상세 문자열)은 아직 정하지 않았습니다.
 - **실제 화면**: `front/src/App.jsx`는 임시입니다.

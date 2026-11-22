@@ -1,8 +1,10 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.ai.runtime import get_runtime
 from app.config import get_settings
 from app.db import close_db, get_db
 from app.errors import register_error_handlers
@@ -23,11 +25,21 @@ async def reap_stale_runs() -> None:
         logger.exception("Could not reap stale AI runs at startup")
 
 
+async def stop_running_runs(timeout: float = 5) -> None:
+    """서버를 끌 때 이 서버에서 도는 AI 실행을 중지해, 부분 답변을 남기고 프로젝트 잠금을 풀게 한다."""
+    tasks = list(get_runtime().tasks.values())
+    for task in tasks:
+        task.cancel()
+    if tasks:
+        await asyncio.wait(tasks, timeout=timeout)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # 다른 서버의 살아 있는 실행은 건드리지 않는다(60초 넘게 멈춘 것만).
     await reap_stale_runs()
     yield
+    await stop_running_runs()
     await close_db()
 
 

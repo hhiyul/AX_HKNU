@@ -141,3 +141,30 @@ def test_make_provider_defaults_to_demo():
     assert isinstance(make_provider(Settings(ai_provider="demo")), DemoProvider)
     provider = make_provider(Settings(ai_provider="openai", openai_api_key="sk-x", openai_model="m"))
     assert isinstance(provider, OpenAIProvider) and provider.model == "m"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [401, 403])
+async def test_rejected_key_is_reported_as_key_problem(status):
+    client = OpenAIProvider("sk-wrong", "gpt-6-luna", httpx.MockTransport(lambda request: httpx.Response(status)))
+    with pytest.raises(ProviderError) as caught:
+        await client.count({"model": "gpt-6-luna", "input": [], "tools": []})
+    assert caught.value.code == "KEY_MISSING_OR_INVALID"
+    with pytest.raises(ProviderError) as caught:
+        [e async for e in client.stream({"model": "gpt-6-luna", "input": [], "tools": []})]
+    assert caught.value.code == "KEY_MISSING_OR_INVALID"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reported,ok", [("gpt-6-luna-2026-10-01", True), ("gpt-6-lunar", False)])
+async def test_dated_snapshot_of_configured_model_is_accepted(reported, ok):
+    async def handler(request):
+        data = 'data: {"type":"response.completed","response":{"status":"completed","model":"%s"}}\n\n' % reported
+        return httpx.Response(200, text=data, headers={"content-type": "text/event-stream"})
+    client = OpenAIProvider("sk-fake-test", "gpt-6-luna", httpx.MockTransport(handler))
+    wire = {"model": "gpt-6-luna", "input": [], "tools": []}
+    if ok:
+        assert [e async for e in client.stream(wire)] == [{"type": "completed"}]
+    else:
+        with pytest.raises(ProviderError):
+            [e async for e in client.stream(wire)]
