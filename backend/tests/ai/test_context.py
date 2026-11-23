@@ -119,3 +119,9 @@ async def test_meter_observes_only_accepted_context_counts_after_compression():
 
 def test_model_name_comes_from_argument():
     assert build_wire([], [], "x", [], "m-test")["model"] == "m-test"
+
+
+def test_policy_asks_for_korean_labels_instead_of_codes():
+    developer = build_wire([], [], "x", [], "m")["input"][0]["content"]
+    assert "작성됨" in developer and "미작성" in developer
+    assert "never show the codes" in developer

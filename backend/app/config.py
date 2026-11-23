@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     ai_provider: Literal["demo", "openai"] = "demo"
     openai_api_key: str = ""
     openai_model: str = "gpt-6-luna"
+    # OpenAI 호환 주소. OpenAI는 https://api.openai.com/v1, BAZE 게이트웨이는 https://api.baze.co/v1/gateway
+    openai_base_url: str = "https://api.openai.com/v1"
+    # 비우면 OpenAI는 none, 게이트웨이는 low. 게이트웨이는 low·medium·high만 받는다.
+    openai_reasoning_effort: Literal["", "none", "low", "medium", "high"] = ""
+    # 기획서 v2: 첨부 원본은 AI가 자동으로 읽지 않는다. true면 참고 파일의 TXT·MD·DOCX를 읽어 넘긴다.
+    ai_read_attachments: bool = False
 
 
 @lru_cache

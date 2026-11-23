@@ -32,7 +32,10 @@ PROVENANCE_POLICY = (
     "different project: never present them as this project's decisions or saved "
     'values, and name the reference project whenever you use its content. Mention '
     "CK status when it is relevant to the user's question, not for unrelated "
-    'conversation.'
+    'conversation. '
+    'When you mention a CK status to the user, write it in Korean: 작성됨 for WRITTEN and 미작성 for SKIPPED, '
+    'and refer to sections by their Korean label (for example 고객선정); never show the codes WRITTEN, SKIPPED, '
+    'CK or ck_ keys to the user.'
 )
 
 
@@ -79,10 +82,8 @@ def build_wire(prefix: list[dict], history: list[dict], current: str, tools: lis
             {"role": "user", "content": current},
             *(tail or []),
         ],
-        "tools": tools,
-        "parallel_tool_calls": False,
-        "reasoning": {"effort": "none"},
-        "truncation": "disabled",
+        # 도구가 없을 때 parallel_tool_calls를 보내면 거절하는 엔드포인트가 있어 아예 넣지 않는다.
+        **({"tools": tools, "parallel_tool_calls": False} if tools else {}),
     }
 
 
@@ -117,7 +118,7 @@ async def prepare(
     for index in range(len(history) - 1, -1, -1):
         if history[index]["role"] == "assistant":
             first_ai = index
-            ai_tokens += await provider.count({"model": model, "input": [{"role": "assistant", "content": history[index]["content"]}], "tools": [], "reasoning": {"effort": "none"}, "truncation": "disabled"})
+            ai_tokens += await provider.count({"model": model, "input": [{"role": "assistant", "content": history[index]["content"]}], "tools": []})
         if ai_tokens >= RECENT_AI_TARGET:
             break
     if first_ai is not None:

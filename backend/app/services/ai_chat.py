@@ -30,8 +30,9 @@ from app.ai.provider import OpenAIProvider
 from app.ai.responses import Delivery, ProviderError
 from app.ai.runtime import Runtime
 from app.ai.usage import UsageTracker, valid_usage
+from app.config import get_settings
 from app.errors import AppError
-from app.services import ai_context, ai_runs, ai_tools, chat, doc_sources, items
+from app.services import ai_context, ai_runs, ai_tools, chat, conversations, doc_sources, items
 from app.services.ai_runs import RunCheck
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,9 @@ REASONS = {
     "CAPSULE_CONFLICT": "컨텍스트 저장이 충돌하여 요청을 중단했습니다.",
     "PROJECT_NOT_ACTIVE": "프로젝트가 보관함이나 휴지통으로 옮겨져 답변을 저장하지 않았습니다.",
     "SEARCH_NOT_ALLOWED": "허용된 일반 개념 또는 공개 검색어 범위를 벗어나 검색을 중단했습니다.",
+    "CREDIT_EXHAUSTED": "AI 크레딧이 부족합니다. 관리자에게 알려 주세요.",
+    "RATE_LIMITED": "요청이 많아 잠시 막혔습니다. 1분쯤 뒤에 다시 시도해 주세요.",
+    "ACCESS_DENIED": "이 키로 쓸 수 없는 모델이거나 접근이 막혔습니다. AI 설정을 확인해 주세요.",
 }
 DEFAULT_REASON = "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요."
 DEFAULT_DOC_TITLE = "생성 문서"
@@ -97,6 +101,7 @@ async def start_run(
     db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project: dict, text: str,
     public_search_terms: str = "", mode: str = "auto", include_session: bool | None = None,
     asset_ids: list[str] | None = None, reference_document: str | None = None, reference_body: str | None = None,
+    conversation_id: str | None = None,
 ) -> ObjectId:
     """프로젝트를 잠그고 사용자 메시지를 저장한 뒤 백그라운드 실행을 시작한다.
 
@@ -106,18 +111,33 @@ async def start_run(
     """
     project_id = project["_id"]
     reference = await _reference(db, project_id, mode, reference_document, reference_body)
+    conversation = await conversations.resolve(db, user_id, project_id, conversation_id)
+
+    def make_job(run_id: ObjectId, message: dict) -> "_RunJob":
+        return _RunJob(
+            db, runtime, user_id, project_id, run_id, message["_id"], text, public_search_terms, mode,
+            include_session, message["asset_ids"], reference, conversation,
+        )
+
+    return await launch(db, runtime, user_id, project_id, text, make_job, asset_ids=asset_ids, conversation_id=conversation)
+
+
+async def launch(
+    db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project_id: ObjectId, text: str,
+    make_job, asset_ids: list[str] | None = None, extra: dict | None = None, conversation_id: ObjectId | None = None,
+) -> ObjectId:
+    """프로젝트를 잠그고 사용자 메시지를 남긴 뒤 make_job(run_id, message)이 만든 실행을 뒤에서 돌린다."""
     run_id = await ai_runs.begin_run(db, user_id, project_id)
     try:
-        message = await chat.add_message(db, user_id, project_id, "USER", text, asset_ids)
+        message_extra = {**(extra or {}), "request_id": run_id} if extra is not None else None
+        message = await chat.add_message(
+            db, user_id, project_id, "USER", text, asset_ids, extra=message_extra, conversation_id=conversation_id
+        )
         await ai_runs.attach_user_message(db, run_id, message["_id"])
     except BaseException:
         await ai_runs.finish_run(db, run_id, project_id, "failed", "MESSAGE_SAVE_FAILED")
         raise
-    job = _RunJob(
-        db, runtime, user_id, project_id, run_id, message["_id"], text, public_search_terms, mode, include_session,
-        message["asset_ids"], reference,
-    )
-    runtime.tasks[str(run_id)] = asyncio.create_task(job.run())
+    runtime.tasks[str(run_id)] = asyncio.create_task(make_job(run_id, message).run())
     return run_id
 
 
@@ -135,6 +155,17 @@ async def _reference(
     return {
         "kind": "reference_document", "id": key, "title": document["title"], "revision": document["revision"],
         "content": document["content"] if body is None else body, "source": "saved" if body is None else "editor",
+    }
+
+
+async def _unread_note(db: AsyncDatabase, asset_ids: list[ObjectId]) -> dict:
+    """첨부 내용은 읽지 않는다(기획서 v2). 파일이 붙었다는 사실과 이름만 알려 필요한 내용을 붙여 달라고 하게 한다."""
+    names = [asset.get("file_name") async for asset in db.assets.find({"_id": {"$in": asset_ids}}, {"file_name": 1})]
+    return {
+        "source": "system_note",
+        "files": names,
+        "content": "The user attached these files, but their contents were not read. If their content matters, "
+                   "ask the user to paste the relevant text.",
     }
 
 
@@ -243,9 +274,11 @@ class _RunJob:
     def __init__(
         self, db, runtime: Runtime, user_id, project_id, run_id, user_message_id, text: str,
         public_search_terms: str = "", mode: str = "auto", include_session: bool | None = None,
-        asset_ids: list[ObjectId] | None = None, reference: dict | None = None,
+        asset_ids: list[ObjectId] | None = None, reference: dict | None = None, conversation_id: ObjectId | None = None,
     ):
         self.db, self.runtime = db, runtime
+        # 이 실행이 속한 채팅 대화. 항목별 AI·할 일 제안 실행은 None이다.
+        self.conversation_id = conversation_id
         self.reference = reference
         self.sources: list[dict] = []
         self.asset_ids = list(asset_ids or [])
@@ -324,7 +357,8 @@ class _RunJob:
     async def _prepare(self, sections: dict, history: list[dict], tail: list[dict]):
         async def save_summary(text: str, covered_ids: list[str], sources: list[str]) -> None:
             self.capsule_revision = await ai_runs.save_capsule(
-                self.db, self.project_id, self.run_id, self.capsule_revision, text, covered_ids, sources
+                self.db, self.project_id, self.run_id, self.capsule_revision, text, covered_ids, sources,
+                self.conversation_id,
             )
 
         prefix = ai_context.prefix_from(sections) + self.toolbox.extra_prefix
@@ -337,7 +371,11 @@ class _RunJob:
     async def _generate(self) -> None:
         project = await self.db.projects.find_one({"_id": self.project_id})
         sections = await ai_context.build_sections(self.db, project, self.user_id)
-        files = await ai_context.file_sections(self.db, project, self.user_id, self.asset_ids)
+        files = {}
+        if get_settings().ai_read_attachments:
+            files = await ai_context.file_sections(self.db, project, self.user_id, self.asset_ids)
+        elif self.asset_ids:
+            sections["attachments_not_read"] = await _unread_note(self.db, self.asset_ids)
         sections.update(files)
         if self.reference:
             sections["reference_document"] = self.reference
@@ -345,14 +383,16 @@ class _RunJob:
         self.source_ids = [ObjectId(key.split(":", 1)[1]) for key in files]
         active = await ai_context.active_file_ids(self.db, project, self.user_id, self.source_ids)
         history, self.capsule_revision = await ai_context.load_history(
-            self.db, self.project_id, self.user_message_id, active
+            self.db, self.project_id, self.user_message_id, active, self.conversation_id
         )
         await self.emit("context_ready", "프로젝트 자료와 이전 대화를 확인했습니다.")
         self.document_mode = self.mode == "document" or (
             self.mode == "auto" and ai_tools.is_document_request(self.text)
         )
         self.search_only = self.mode == "auto" and ai_tools.is_search_only_request(self.text)
-        can_search = bool(project.get("search_enabled")) and hasattr(self.runtime.provider, "web_search")
+        provider = self.runtime.provider
+        supports = getattr(provider, "supports_web_search", hasattr(provider, "web_search"))
+        can_search = bool(project.get("search_enabled")) and supports
         self.toolbox = ai_tools.ToolBox(
             self.emit, self.provider, sections, can_search, self.public_search_terms, self._search_allowed,
             route_offered=self.mode == "auto" and not self.document_mode and not self.search_only,
@@ -446,11 +486,19 @@ class _RunJob:
         message = await chat.add_message(
             self.db, self.user_id, self.project_id, "ASSISTANT", text, completion=completion, doc=doc,
             source_ids=self.source_ids, record_draft=self.toolbox.record_draft if self.toolbox else None,
+            extra=self._message_extra(text, completion), conversation_id=self.conversation_id,
         )
         self.assistant_message_id = message["_id"]
-        if doc:
-            await self.emit("document_candidate", str(message["_id"]))
+        await self._after_save(message)
         return True
+
+    def _message_extra(self, text: str, completion: str) -> dict | None:
+        """답변 메시지에 더 붙일 필드. 항목별 AI·할 일 제안 실행이 쓴다."""
+        return None
+
+    async def _after_save(self, message: dict) -> None:
+        if message.get("doc"):
+            await self.emit("document_candidate", str(message["_id"]))
 
     async def _save_partial(self, completion: str) -> None:
         if self.pieces and not self.saving:

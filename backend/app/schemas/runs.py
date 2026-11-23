@@ -22,6 +22,8 @@ class RunCreate(RequestModel):
     # 문서 모드에서 참고할 기존 산출물의 key와, 저장하지 않은 편집 중인 글(있으면 저장된 내용 대신 쓴다)
     reference_document: str | None = None
     reference_body: Annotated[str, StringConstraints(max_length=50000)] | None = None
+    # 메시지를 보낼 대화(GET /projects/{id}/conversations). 비우면 가장 최근 대화, 없으면 새 대화
+    conversation_id: str | None = None
 
 
 class RunStarted(BaseModel):

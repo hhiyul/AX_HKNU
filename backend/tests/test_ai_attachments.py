@@ -16,6 +16,15 @@ DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.docu
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 
 
+@pytest.fixture(autouse=True)
+def read_attachments_on(monkeypatch):
+    """이 파일은 첨부 읽기를 켠 경우(AI_READ_ATTACHMENTS=true)를 시험한다. 기본은 꺼져 있다."""
+    from app.config import Settings
+    from app.services import ai_chat
+
+    monkeypatch.setattr(ai_chat, "get_settings", lambda: Settings(ai_read_attachments=True))
+
+
 @pytest.fixture
 async def setup(client, login, db):
     me = await login(client)
@@ -183,3 +192,16 @@ async def test_capsule_built_from_removed_file_is_not_reused(setup, db):
     assert [item["content"] for item in history] == ["a", "b"]
     history, _ = await ai_context.load_history(db, project_id, current["_id"], active_file_ids={removed})
     assert history[0]["id"] == "capsule"
+
+
+async def test_attachments_are_not_read_by_default(setup, use_runtime, monkeypatch, db):
+    # 기획서 v2: 첨부 원본의 자동 분석은 하지 않는다. 켜야만(AI_READ_ATTACHMENTS=true) 읽는다.
+    from app.config import Settings
+    from app.services import ai_chat
+
+    monkeypatch.setattr(ai_chat, "get_settings", lambda: Settings(ai_read_attachments=False))
+    file_id = await upload(setup, "읽으면 안 되는 메모".encode(), "memo.txt")
+    provider = FakeProvider([answer("답")])
+    await start(setup, use_runtime(provider), asset_ids=[file_id])
+    assert "읽으면 안 되는 메모" not in wire_text(provider.calls[0])
+    assert (await db.messages.find_one({"role": "USER"}))["asset_ids"] == [ObjectId(file_id)]

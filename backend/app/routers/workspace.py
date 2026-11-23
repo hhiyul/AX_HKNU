@@ -8,7 +8,7 @@ from app.deps import Once, Page, Workspace, current_user
 from app.errors import AppError
 from app.schemas import workspace as schema
 from app.schemas.common import to_api
-from app.services import chat, doc_sources, economics, exports, items, overview
+from app.services import chat, conversations, doc_sources, economics, exports, items, overview, tasks
 from app.services.store import get_request
 
 BASE = "/projects/{project_id}"
@@ -119,8 +119,11 @@ async def confirm_price(body: schema.PriceConfirm, once: Once = Depends(), ws: W
 
 
 @message_router.get("", response_model=list[schema.MessageOut])
-async def list_messages(page: Page = Depends(), ws: Workspace = Depends()):
-    return to_api(await chat.list_messages(ws.db, ws.project_id, page))
+async def list_messages(conversation_id: str | None = None, page: Page = Depends(), ws: Workspace = Depends()):
+    """conversation_id를 주면 그 대화의 메시지만, 비우면 프로젝트의 모든 메시지."""
+    conversation = (await conversations.get(ws.db, ws.project_id, conversation_id))["_id"] if conversation_id else None
+    messages = await chat.list_messages(ws.db, ws.project_id, page, conversation)
+    return to_api(await tasks.annotate_proposals(ws.db, messages))
 
 
 @message_router.post("", response_model=schema.MessageOut, status_code=201)

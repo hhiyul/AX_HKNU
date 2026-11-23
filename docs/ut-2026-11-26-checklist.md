@@ -6,6 +6,19 @@
 
 ---
 
+## 0. v05 변경 (2026-11-24, 브랜치 `feature/backend-v05`)
+
+11/23 「서비스 구조 & MVP 기획서 v2」에 맞춰 백엔드를 다시 맞췄다. 설계는 [docs/superpowers/specs/2026-11-24-v05-structured-docs-design.md](superpowers/specs/2026-11-24-v05-structured-docs-design.md).
+
+- **전용 문서**: 펀딩 상세페이지(F01~F08, 필수 6)·사업계획서(B01~B08, 필수 8). 항목별 임시 입력·저장·검토 완료, 진행도, 마지막 항목, 미리보기·md/txt/docx/pdf. API는 `/projects/{id}/docs`.
+- **항목별 AI**: `POST .../sections/{sid}/assist`(초안/다듬기). 사용자가 고른 참고(`references`)만 보낸다. 후보는 답변 메시지의 `candidate`, 적용(`/apply`)은 임시 입력에만. 후보 뒤에 글이 바뀌었으면 409 `CANDIDATE_OUTDATED`(비교 후 `confirm: true`).
+- **할 일 → 일정**: `POST .../sections/{sid}/task-proposals`로 후보(`proposals`), 사용자가 날짜를 골라 `POST /projects/{id}/tasks`(`source_doc_id`·`source_section_id`·`source_proposal_id`). 같은 후보는 한 번만 등록(다시 보내면 200 `existing`). 일정의 `source`로 원래 항목에 돌아간다.
+- **계정 홈**: `GET /home?brand_id=&today=`.
+- **첨부 자동 읽기 끔**: 기획서대로 기본 false(`AI_READ_ATTACHMENTS`). 파일 내용은 사용자가 `note` 참고로 발췌해 보낸다.
+- **추가 API**: 계정 전체 일정 `GET /tasks?from=&to=&brand_id=`. 메시지의 할 일 후보에는 등록한 일정의 `task_id`·`task_status`가 붙는다(재방문 시 "등록됨" 표시). 휴지통에 있는 일정이면 복원을 안내한다.
+- **화면 담당 추가 사건**: `assist_candidate`(content=메시지 id, 후보 보여 주기), `task_proposals`(content=메시지 id, 후보 확인 창).
+- 기획서 UT 과업과의 대응: ① 펀딩 항목 작성 + AI 도움 → docs·assist·apply ② 견적 할 일 남기고 항목으로 복귀 → task-proposals·tasks·`source` ③ 재방문 시 위치 찾기 → home·`last_section_id` ④ 같은 프로젝트에서 사업계획서 시작 → `template_id: business_plan` + `references`(plan·record·message·note).
+
 ## 1. 지금 상태
 
 조원 파이프라인(`feature/ai-agent-pipeline`)의 AI 기능을 백엔드(`feature/backend-prototype`)에 모두 옮겼다.
@@ -16,7 +29,7 @@
 | 6개 기획 항목·참고 프로젝트·AI와 함께 정리한 내용을 AI가 읽기 | 완료 |
 | 웹 검색(검색 허용이 켜진 프로젝트만) | 완료 |
 | 문서 초안 → 산출물로 저장, 기존 산출물 참고, 출처·변경 확인 | 완료 |
-| 참고 파일(TXT·MD·DOCX)을 AI가 읽기 | 완료 |
+| 참고 파일(TXT·MD·DOCX)을 AI가 읽기 | v05에서 기본 끔(`AI_READ_ATTACHMENTS=false`). 파일이 붙었다는 사실과 이름만 AI에 알린다 |
 | AI 기록 검토안 → 사용자가 검수하고 저장 | 완료 |
 | 내보내기(산출물·저장된 기획을 md·txt·docx·pdf로) | 완료 |
 
@@ -30,14 +43,14 @@
 ### 백엔드 담당
 
 - [ ] **커밋·push.** 2~4단계 변경(약 39개 파일)이 아직 커밋되지 않았다.
-- [ ] **`.env`에 AI 설정 넣기.** `AI_PROVIDER=openai`, `OPENAI_API_KEY=<키>`, 필요하면 `OPENAI_MODEL`(기본 `gpt-6-luna`). 이때부터 호출 비용이 든다. 키는 git에 올리지 않는다.
+- [ ] **`.env`에 AI 설정 넣기(BAZE 게이트웨이).** `AI_PROVIDER=openai`, `OPENAI_API_KEY=<BAZE 키>`, `OPENAI_BASE_URL=https://api.baze.co/v1/gateway`, `OPENAI_MODEL=gpt-6-luna`. 게이트웨이에서는 웹 검색이 꺼지고, 토큰 수는 서버가 어림잡는다. 이전 안내: `AI_PROVIDER=openai`, `OPENAI_API_KEY=<키>`, 필요하면 `OPENAI_MODEL`(기본 `gpt-6-luna`). 이때부터 호출 비용이 든다. 키는 git에 올리지 않는다.
 - [ ] **서버 이미지 다시 빌드.** Pandoc·LibreOffice·한글 글꼴이 들어가 첫 빌드는 몇 분 걸리고 이미지가 수백 MB 커진다.
 
   ```bash
   docker compose up -d --build
   ```
 
-- [ ] **Atlas에 DB 규칙 적용.** `ai_runs` 컬렉션과 새 필드(모두 선택 필드)가 생긴다. 안 해도 동작은 하지만 맞춰 둔다.
+- [ ] **Atlas에 DB 규칙 적용.** `ai_runs`·`structured_docs`·`doc_sections`·`tasks` 컬렉션과 규칙이 생긴다. **반드시 실행한다.** 중복 방지 인덱스는 서버 시작 때도 만들지만, 검증 규칙은 이 스크립트로만 들어간다.
 
   ```bash
   docker compose run --rm --build backend python init_db.py
@@ -124,7 +137,7 @@
 
 ### 제약
 
-- AI가 읽는 파일: TXT·MD·DOCX만. 이미지는 읽지 않는다. 이번에 붙인 파일이 먼저, 최대 10개, 파일당 5만 자(넘으면 앞부분만).
+- 첨부 파일 내용은 기본으로 AI에 보내지 않는다(기획서 v2). 필요한 내용은 사용자가 발췌해 `note` 참고로 보낸다. `AI_READ_ATTACHMENTS=true`로 켜면 TXT·MD·DOCX를 최대 10개, 파일당 5만 자까지 읽는다.
 - 참고에서 빼거나 지운 파일로 만든 답변·요약은 이후 대화에 쓰지 않는다. 원본 파일은 남는다.
 - AI에게 넘기는 정리 내용은 최근 20개. 참고 프로젝트는 5개까지(남의 것, 보관·휴지통 프로젝트는 빠짐).
 - 웹 검색은 정해진 일반 개념이나 사용자가 적은 공개 검색어의 단어로만 한다. 벗어나면 검색하지 않고 AI가 다시 고른다.

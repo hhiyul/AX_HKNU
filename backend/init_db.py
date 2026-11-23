@@ -97,6 +97,8 @@ COLLECTIONS = {
             # 진행 중인 AI 채팅 실행과 압축한 예전 대화 {text, covered_ids, revision}
             "active_run": ["objectId"],
             "chat_capsule": ["object"],
+            # 대화별 압축 요약 {conversation_id: {text, covered_ids, revision}}
+            "chat_capsules": ["object"],
         },
     ),
     "assets": build_schema(
@@ -156,7 +158,36 @@ COLLECTIONS = {
         },
         # doc은 AI가 만든 문서 초안, record_key와 doc_key는 이 답변에서 저장한 글
         # source_ids는 AI 답변이 읽은 참고 파일
-        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"], "source_ids": ["array"], "record_draft": ["object"]},
+        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"], "source_ids": ["array"], "record_draft": ["object"],
+                  # 항목별 AI·할 일 제안: 목적, 대상 문서·항목, 실행 id, 후보, 할 일 후보
+                  "purpose": ["string"], "target_doc_id": ["objectId"], "target_section_id": ["string"],
+                  "request_id": ["objectId"], "candidate": ["object"], "proposals": ["array"],
+                  # 채팅 대화. 항목별 AI·할 일 제안 메시지는 없음
+                  "conversation_id": ["objectId"]},
+    ),
+    # AI 채팅 대화 목록. 제목이 없으면 첫 질문으로 정한다.
+    "conversations": build_schema(
+        required={
+            **OWNED,
+            "message_count": "int",
+            "revision": "int",
+            **TIMESTAMPS,
+        },
+        optional={"title": ["string"], "preview": ["string"], "last_message_at": ["date"], "deleted_at": ["date"]},
+    ),
+    # 정산 수입·지출 내역. 금액은 원 단위 양수
+    "ledger_entries": build_schema(
+        required={
+            **OWNED,
+            "type": enum("income", "expense"),
+            "title": "string",
+            "amount": {"bsonType": ["int", "long"], "minimum": 1},
+            # YYYY-MM-DD
+            "date": "string",
+            "revision": "int",
+            **TIMESTAMPS,
+        },
+        optional={"note": ["string"], "deleted_at": ["date"]},
     ),
     # 중복 요청 방지 기록. 7일 뒤 자동으로 지워진다.
     "requests": build_schema(
@@ -167,6 +198,51 @@ COLLECTIONS = {
             "created_at": "date",
         },
         optional={"error": ["object"]},
+    ),
+    # 항목형 전용 문서(펀딩 상세페이지·사업계획서). 항목은 doc_sections에 있다.
+    "structured_docs": build_schema(
+        required={
+            **OWNED,
+            "title": "string",
+            "template_id": enum("funding", "business_plan"),
+            "template_version": "int",
+            "revision": "int",
+            **TIMESTAMPS,
+        },
+        optional={"last_section_id": ["string"], "deleted_at": ["date"]},
+    ),
+    # 문서 항목. text는 저장 본문, draft는 임시 입력. reviewed_revision == revision이면 검토 완료.
+    "doc_sections": build_schema(
+        required={
+            **OWNED,
+            "doc_id": "objectId",
+            "section_id": "string",
+            "text": "string",
+            "draft_revision": "int",
+            "revision": "int",
+            "material_ids": "array",
+            "updated_at": "date",
+        },
+        optional={"draft": ["string"], "reviewed_revision": ["int"]},
+    ),
+    # 할 일(일정). 문서 항목에서 만들었으면 source_*로 원래 항목에 돌아간다.
+    "tasks": build_schema(
+        required={
+            **OWNED,
+            "title": "string",
+            # YYYY-MM-DD
+            "date": "string",
+            "done": "bool",
+            "revision": "int",
+            **TIMESTAMPS,
+        },
+        optional={
+            "note": ["string"],
+            "source_doc_id": ["objectId"],
+            "source_section_id": ["string"],
+            "source_proposal_id": ["objectId"],
+            "deleted_at": ["date"],
+        },
     ),
     # AI 채팅 실행 기록. 메시지 하나를 보내면 실행 하나가 생긴다.
     "ai_runs": build_schema(
@@ -226,6 +302,15 @@ INDEXES = {
         ([("project_id", ASCENDING)], {}),
         ([("ai_job_id", ASCENDING)], {}),
     ],
+    "structured_docs": [([("project_id", ASCENDING), ("updated_at", DESCENDING)], {}), ([("user_id", ASCENDING), ("updated_at", DESCENDING)], {})],
+    "doc_sections": [([("doc_id", ASCENDING), ("section_id", ASCENDING)], UNIQUE), ([("project_id", ASCENDING)], {})],
+    "tasks": [
+        ([("project_id", ASCENDING), ("date", ASCENDING)], {}),
+        ([("user_id", ASCENDING), ("date", ASCENDING)], {}),
+        # 같은 AI 제안은 일정 하나만
+        ([("user_id", ASCENDING), ("source_proposal_id", ASCENDING)],
+         {"unique": True, "partialFilterExpression": {"source_proposal_id": {"$type": "objectId"}}}),
+    ],
     "ai_runs": [
         ([("project_id", ASCENDING), ("created_at", DESCENDING)], {}),
         ([("status", ASCENDING), ("heartbeat_at", ASCENDING)], {}),
@@ -240,7 +325,12 @@ INDEXES = {
         ([("project_id", ASCENDING), ("kind", ASCENDING), ("updated_at", DESCENDING)], {}),
     ],
     "cost_sheets": [([("project_id", ASCENDING)], UNIQUE)],
-    "messages": [([("project_id", ASCENDING), ("ordinal", ASCENDING)], {})],
+    "messages": [
+        ([("project_id", ASCENDING), ("ordinal", ASCENDING)], {}),
+        ([("conversation_id", ASCENDING), ("ordinal", ASCENDING)], {}),
+    ],
+    "conversations": [([("project_id", ASCENDING), ("last_message_at", DESCENDING)], {})],
+    "ledger_entries": [([("project_id", ASCENDING), ("date", DESCENDING)], {})],
     "requests": [
         ([("user_id", ASCENDING), ("key", ASCENDING)], UNIQUE),
         ([("created_at", ASCENDING)], {"expireAfterSeconds": 7 * 24 * 60 * 60}),

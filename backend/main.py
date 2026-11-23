@@ -8,7 +8,10 @@ from app.ai.runtime import get_runtime
 from app.config import get_settings
 from app.db import close_db, get_db
 from app.errors import register_error_handlers
-from app.routers import assets, auth, brands, jobs, openai_test, profile, projects, runs, workspace
+import init_db
+from app.routers import (
+    assets, auth, brands, conversations, docs, home, jobs, ledger, openai_test, profile, projects, runs, tasks, workspace,
+)
 from app.services import ai_runs
 
 
@@ -34,10 +37,24 @@ async def stop_running_runs(timeout: float = 5) -> None:
         await asyncio.wait(tasks, timeout=timeout)
 
 
+async def ensure_indexes() -> None:
+    """중복을 막는 인덱스(같은 할 일 후보는 일정 하나, 문서 항목은 하나)는 init_db를 안 돌려도 시작할 때 만든다."""
+    if not get_settings().mongo_details:
+        return
+    try:
+        db = get_db()
+        for name in ("tasks", "doc_sections", "structured_docs"):
+            for keys, options in init_db.INDEXES[name]:
+                await db[name].create_index(keys, **options)
+    except Exception:
+        logger.exception("Could not create indexes at startup")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # 다른 서버의 살아 있는 실행은 건드리지 않는다(60초 넘게 멈춘 것만).
     await reap_stale_runs()
+    await ensure_indexes()
     yield
     await stop_running_runs()
     await close_db()
@@ -54,6 +71,13 @@ for workspace_router in workspace.routers:
 app.include_router(assets.router)
 app.include_router(jobs.router)
 app.include_router(runs.router)
+app.include_router(conversations.router)
+app.include_router(docs.template_router)
+app.include_router(docs.router)
+app.include_router(tasks.router)
+app.include_router(ledger.router)
+app.include_router(home.router)
+app.include_router(home.task_router)
 app.include_router(openai_test.router)
 
 #연결테스트 코드

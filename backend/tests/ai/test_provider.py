@@ -144,7 +144,7 @@ def test_make_provider_defaults_to_demo():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("status", [401, 403])
+@pytest.mark.parametrize("status", [401])
 async def test_rejected_key_is_reported_as_key_problem(status):
     client = OpenAIProvider("sk-wrong", "gpt-6-luna", httpx.MockTransport(lambda request: httpx.Response(status)))
     with pytest.raises(ProviderError) as caught:

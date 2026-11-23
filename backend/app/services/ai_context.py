@@ -171,19 +171,24 @@ def _history_item(message: dict) -> dict:
 
 
 async def load_history(
-    db: AsyncDatabase, project_id: ObjectId, exclude_message_id: ObjectId, active_file_ids: set[str] = frozenset()
+    db: AsyncDatabase, project_id: ObjectId, exclude_message_id: ObjectId, active_file_ids: set[str] = frozenset(),
+    conversation_id: ObjectId | None = None,
 ) -> tuple[list[dict], int]:
     """이전 대화와 지금 압축 요약의 번호.
 
     참고에서 뺀 파일을 읽고 만든 답변은 넣지 않는다. 요약은 덮는 메시지가 모두 남아 있고, 요약이 읽은 파일이 모두
     아직 참고 중일 때만 그 메시지들 대신 쓴다.
     """
-    cursor = db.messages.find({"project_id": project_id, "_id": {"$ne": exclude_message_id}}).sort("ordinal", 1)
+    query: dict = {"project_id": project_id, "_id": {"$ne": exclude_message_id}}
+    # 대화를 주면 그 대화의 메시지만 넣는다. 다른 대화의 내용은 AI에게 넘기지 않는다.
+    if conversation_id is not None:
+        query["conversation_id"] = conversation_id
+    cursor = db.messages.find(query).sort("ordinal", 1)
     history = [
         item async for item in (_history_item(message) async for message in cursor)
         if set(item["source_ids"]) <= set(active_file_ids)
     ]
-    capsule = await ai_runs.load_capsule(db, project_id)
+    capsule = await ai_runs.load_capsule(db, project_id, conversation_id)
     if not capsule:
         return history, 0
     covered = set(capsule["covered_ids"])

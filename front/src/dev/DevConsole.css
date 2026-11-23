@@ -1,19 +1,19 @@
-main {
+.dev-console {
   max-width: 960px;
   margin: 0 auto;
   padding: 16px;
 }
 
-section {
+.dev-console section {
   border-top: 1px solid #ccc;
   padding: 8px 0 12px;
 }
 
-h2 {
+.dev-console h2 {
   font-size: 18px;
 }
 
-.row {
+.dev-console .row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -21,19 +21,19 @@ h2 {
   margin: 4px 0;
 }
 
-.row > span {
+.dev-console .row > span {
   width: 90px;
 }
 
-.row input:not([type]) {
+.dev-console .row input:not([type]) {
   min-width: 260px;
 }
 
-.grow {
+.dev-console .grow {
   flex: 1;
 }
 
-.group {
+.dev-console .group {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -41,28 +41,28 @@ h2 {
   margin: 6px 0;
 }
 
-.group strong {
+.dev-console .group strong {
   width: 120px;
 }
 
-textarea {
+.dev-console textarea {
   width: 100%;
   box-sizing: border-box;
   font-family: monospace;
 }
 
-.hint {
+.dev-console .hint {
   color: #777;
   font-size: 13px;
 }
 
-.entry {
+.dev-console .entry {
   border: 1px solid #ddd;
   padding: 6px 8px;
   margin: 6px 0;
 }
 
-.entry pre {
+.dev-console .entry pre {
   margin: 4px 0 0;
   white-space: pre-wrap;
   word-break: break-all;
@@ -70,10 +70,10 @@ textarea {
   overflow: auto;
 }
 
-.ok {
+.dev-console .ok {
   color: #1a7f37;
 }
 
-.bad {
+.dev-console .bad {
   color: #c62828;
 }
