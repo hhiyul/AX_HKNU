@@ -215,6 +215,9 @@ async def create_item(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId
                 db, user_id, project_id, kind, linked["key"], linked["revision"], content, title,
                 log="AI 답변 검수·확정 → 상품기획에 저장",
             )
+        if kind == "record" and message.get("record_draft"):
+            title = title or message["record_draft"]["title"]
+            content = content or message["record_draft"]["content"]
         if kind == "document" and message.get("doc"):
             title = title or message["doc"]["title"]
             content = content or message["doc"]["content"]
@@ -231,6 +234,8 @@ async def create_item(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId
     changes = {"title": title, "content": content, "message_id": message["_id"] if message else None}
     if kind == "document":
         changes["draft"] = None
+        # AI가 만든 문서면 어떤 자료로 만들었는지(출처)를 함께 남긴다.
+        changes["sources"] = list(((message or {}).get("doc") or {}).get("sources") or [])
     document = await upsert_revision(db.items, ident, None, changes, 0)
     if message:
         await db.messages.update_one({"_id": message["_id"]}, {"$set": {MESSAGE_LINKS[kind]: key}})

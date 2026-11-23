@@ -23,7 +23,7 @@ STRING_LIST = {"bsonType": "array", "items": {"bsonType": "string"}}
 TIMESTAMPS = {"created_at": "date", "updated_at": "date"}
 # 프로젝트에 딸린 자료가 공통으로 갖는 필드
 OWNED = {"user_id": "objectId", "project_id": "objectId"}
-# 상품기획 6개 항목. app/services/items.py의 PLAN_LABELS와 같아야 한다.
+# 상품기획 6개 항목 순서대로임. app/services/items.py의 PLAN_LABELS와 같아야 한다.
 PLAN_KEYS = ["ck_01", "ck_02", "ck_03", "ck_04", "ck_05", "ck_06"]
 
 
@@ -94,6 +94,9 @@ COLLECTIONS = {
             "file_refs": ["array"],
             "chip_refs": ["array"],
             "message_count": ["int"],
+            # 진행 중인 AI 채팅 실행과 압축한 예전 대화 {text, covered_ids, revision}
+            "active_run": ["objectId"],
+            "chat_capsule": ["object"],
         },
     ),
     "assets": build_schema(
@@ -132,6 +135,8 @@ COLLECTIONS = {
             "message_id": ["objectId"],
             # 산출물 편집기의 임시 저장
             "draft": ["object"],
+            # AI가 만든 산출물의 출처 목록
+            "sources": ["array"],
         },
     ),
     # 경제성 입력. 프로젝트당 문서 하나. cost는 지금 입력한 값, base는 변경 전 비교 기준이다.
@@ -150,7 +155,8 @@ COLLECTIONS = {
             "created_at": "date",
         },
         # doc은 AI가 만든 문서 초안, record_key와 doc_key는 이 답변에서 저장한 글
-        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"]},
+        # source_ids는 AI 답변이 읽은 참고 파일
+        optional={"doc": ["object"], "record_key": ["string"], "doc_key": ["string"], "source_ids": ["array"], "record_draft": ["object"]},
     ),
     # 중복 요청 방지 기록. 7일 뒤 자동으로 지워진다.
     "requests": build_schema(
@@ -161,6 +167,28 @@ COLLECTIONS = {
             "created_at": "date",
         },
         optional={"error": ["object"]},
+    ),
+    # AI 채팅 실행 기록. 메시지 하나를 보내면 실행 하나가 생긴다.
+    "ai_runs": build_schema(
+        required={
+            "user_id": "objectId",
+            "project_id": "objectId",
+            "status": enum("running", "completed", "failed", "stopped", "unknown"),
+            **TIMESTAMPS,
+        },
+        optional={
+            # 잠금을 잡은 직후 저장한 사용자 메시지와, 저장했다면 AI 답변
+            "user_message_id": ["objectId"],
+            "assistant_message_id": ["objectId"],
+            "error_code": ["string"],
+            "delivery": ["string"],
+            "usage": ["object"],
+            "finished_at": ["date"],
+            # 실행 중 15초마다 갱신. 60초 넘게 멈추면 죽은 실행으로 정리한다.
+            "heartbeat_at": ["date"],
+            # 실행을 갖지 않은 서버가 받은 중지 요청
+            "stop_requested": ["bool"],
+        },
     ),
     "ai_jobs": build_schema(
         required={
@@ -197,6 +225,10 @@ INDEXES = {
         ([("brand_id", ASCENDING), ("created_at", DESCENDING)], {}),
         ([("project_id", ASCENDING)], {}),
         ([("ai_job_id", ASCENDING)], {}),
+    ],
+    "ai_runs": [
+        ([("project_id", ASCENDING), ("created_at", DESCENDING)], {}),
+        ([("status", ASCENDING), ("heartbeat_at", ASCENDING)], {}),
     ],
     "ai_jobs": [
         ([("user_id", ASCENDING), ("created_at", DESCENDING)], {}),

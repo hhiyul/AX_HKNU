@@ -25,6 +25,8 @@ async def add_message(
     asset_ids: list[str] | None = None,
     completion: str = "COMPLETE",
     doc: dict | None = None,
+    source_ids: list[ObjectId] | None = None,
+    record_draft: dict | None = None,
 ) -> dict:
     assets = await owned_ids(db, "assets", user_id, asset_ids or [])
     now = utcnow()
@@ -47,6 +49,10 @@ async def add_message(
         "completion": completion,
         # AI가 만든 문서 초안. 사용자가 "산출물로 저장"을 눌러야 산출물이 된다.
         "doc": doc,
+        # AI 답변이 읽은 참고 파일. 나중에 그 파일을 참고에서 빼면 이 답변은 이후 대화에 쓰지 않는다.
+        "source_ids": list(source_ids or []),
+        # AI가 만든 기록 검토안 {title, content}. "검수하고 저장하기"의 기본값으로 쓴다.
+        "record_draft": record_draft,
         # 이 답변에서 저장한 정리 내용과 산출물의 key. 저장하지 않았으면 None.
         "record_key": None,
         "doc_key": None,

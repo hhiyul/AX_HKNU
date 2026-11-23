@@ -1,5 +1,6 @@
 """프로젝트 작업실 API: 글(기획 항목·AI 정리 내용·산출물), 경제성, AI 채팅, 개요."""
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db import get_db
@@ -7,7 +8,7 @@ from app.deps import Once, Page, Workspace, current_user
 from app.errors import AppError
 from app.schemas import workspace as schema
 from app.schemas.common import to_api
-from app.services import chat, economics, items, overview
+from app.services import chat, doc_sources, economics, exports, items, overview
 from app.services.store import get_request
 
 BASE = "/projects/{project_id}"
@@ -59,6 +60,18 @@ async def save_item(
 @item_router.delete("/{kind}/{key}", status_code=204)
 async def delete_item(kind: schema.ItemKind, key: str, revision: int = RevisionQuery, ws: Workspace = Depends()):
     await items.delete_item(ws.db, ws.project_id, kind, key, revision)
+
+
+@item_router.get("/document/{key}/export/{fmt}")
+async def export_document(key: str, fmt: str, ws: Workspace = Depends()):
+    """저장된 산출물을 md 또는 txt 파일로 내려받는다. 임시 저장(draft)은 포함하지 않는다."""
+    return Response(**await exports.document_export(ws.db, ws.project_id, key, fmt))
+
+
+@item_router.get("/document/{key}/changes")
+async def document_changes(key: str, ws: Workspace = Depends()):
+    """AI가 만든 산출물의 출처(기획 항목, 정리 내용, 참고 산출물, 참고 파일, 검색 주소)가 그 뒤 바뀌었는지."""
+    return to_api(await doc_sources.document_changes(ws.db, ws.project_id, key))
 
 
 @item_router.delete("/document/{key}/draft", response_model=schema.ItemOut)
@@ -136,6 +149,12 @@ async def get_projection(sections: str | None = None, ws: Workspace = Depends())
     if unknown:
         raise AppError(422, "VALIDATION_ERROR", f"입력값을 확인해 주세요: sections ({', '.join(unknown)})")
     return to_api(await overview.get_projection(ws.db, ws.project, wanted))
+
+
+@overview_router.get(f"{BASE}/plan-export/{{fmt}}")
+async def export_plan(fmt: str, ws: Workspace = Depends()):
+    """저장된 상품 기획(6개 항목)과 AI와 함께 정리한 내용을 md 또는 txt 파일로 내려받는다."""
+    return Response(**await exports.plan_export(ws.db, ws.project, fmt))
 
 
 @overview_router.get("/requests/{key}", response_model=schema.RequestOut)

@@ -1,7 +1,7 @@
 # AX_HKNU
 
 브랜드와 상품 기획을 AI와 함께 만들어 가는 서비스의 저장소입니다.
-지금은 **백엔드**(로그인, 브랜드, 프로젝트 작업실, 파일, 작업 조회)까지 있고, AI 생성 기능과 실제 화면은 아직 없습니다.
+지금은 **백엔드**(로그인, 브랜드, 프로젝트 작업실, 파일, 작업 조회)와 AI 채팅·문서 생성 API가 있으며, 프런트엔드는 API 확인용 임시 화면입니다.
 프로젝트 작업실은 UX Flow Atlas v0.3 기준으로 개요, 상품기획 6개 항목, 경제성, 기획 산출물, 추가 기록, AI 채팅·제안의 저장 구조와 API를 갖췄습니다.
 
 ## 한눈에 보기
@@ -37,6 +37,9 @@ Docker만 있으면 됩니다.
    | `MONGO_DETAILS` | Atlas 연결 문자열. DB 이름을 빼면 `ax_platform`을 씁니다. |
    | `JWT_SECRET` | 로그인 토큰 서명 키. 비어 있으면 로그인 API가 503을 돌려줍니다. 만드는 명령은 `.env.example`에 있습니다. |
    | `COOKIE_SECURE` | HTTPS로 배포할 때만 `true` |
+   | `AI_PROVIDER` | `demo`(기본, 실제 호출 없는 모의 응답) 또는 `openai`(실제 호출, 비용 발생) |
+   | `OPENAI_API_KEY` | `AI_PROVIDER=openai`일 때 쓰는 키 |
+   | `OPENAI_MODEL` | 기본 `gpt-6-luna` |
 
 2. 컨테이너를 띄웁니다.
    ```bash
@@ -82,7 +85,8 @@ users (사용자)
  │   ├─ items                        프로젝트에 저장하는 글. kind로 구분한다
  │   │                                 plan 상품기획 6개 항목 · record AI와 함께 정리한 내용 · document 산출물
  │   ├─ cost_sheets                  경제성 입력값(프로젝트당 하나). 비교 결과는 조회할 때 계산한다
- │   └─ messages                     AI 채팅 메시지
+ │   ├─ messages                     AI 채팅 메시지
+ │   └─ ai_runs                      AI 채팅 실행 기록(상태, 실패 사유, 토큰 사용량). 진행 중 잠금은 projects.active_run
  ├─ assets (파일)                    brand_id, project_id 중 하나 이상
  ├─ ai_jobs (AI 작업)
  └─ requests                         중복 요청 방지 기록 (7일 뒤 자동 삭제)
@@ -116,8 +120,11 @@ users (사용자)
 | 개요 | `GET /overview` | 작업실 홈에 필요한 것: 프로젝트(메모·최근 작업 포함), 기획 6개 항목 상태, 글·대화·파일 수, 확정 가격 |
 | AI 맥락 | `GET /projection?sections=` | 파이프라인에 넘길 프로젝트 내용과 `bundle_revision` |
 | 글 | `GET·POST /items/{kind}`, `GET·PUT·DELETE /items/{kind}/{key}`, `DELETE /items/document/{key}/draft` | `kind`는 `plan`, `record`, `document`. AI 답변 저장은 `POST`에 `message_id`를 넣습니다 |
+| 내보내기 | `GET /items/document/{key}/export/{md·txt·docx·pdf}`, `GET /plan-export/{md·txt·docx·pdf}` | 저장된 산출물, 또는 6개 항목과 AI와 함께 정리한 내용을 파일로 내려받습니다. 임시 저장은 넣지 않습니다. 변환 도구가 없으면 503 |
+| 문서 출처 | `GET /items/document/{key}/changes` | AI가 만든 산출물이 참고한 기획 항목·정리 내용·참고 산출물·참고 파일이 그 뒤 바뀌었는지(`unchanged`·`changed`·`unavailable`) |
 | 경제성 | `GET·PUT /economics`, `POST /economics/baseline`, `POST /economics/confirm` | 입력 저장, 비교 기준 저장, 판매가 결정(`plan/ck_05`에 반영) |
-| AI 채팅 | `GET·POST /messages` | 사용자 메시지 저장만. 답변 생성은 파이프라인 |
+| AI 채팅 | `GET·POST /messages` | 메시지 목록과, AI 답변 없이 사용자 메시지만 저장 |
+| AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다. 본문: `text`, `mode`(`auto`·`chat`·`document`), `include_session`, `public_search_terms`, `asset_ids`(이번에 붙인 파일), `reference_document`·`reference_body`(문서 모드에서 참고할 산출물). AI는 프로젝트의 참고 파일(`file_refs`)과 붙인 파일 중 TXT·MD·DOCX를 읽습니다. 기록 검토안은 `record_candidate` 사건과 답변의 `record_draft`로 옵니다. 웹 검색은 프로젝트의 `search_enabled`가 켜져 있을 때만 합니다. 문서 모드에서 끝까지 만든 답변은 메시지의 `doc`에 남고 `document_candidate` 사건이 옵니다. `document_route` 사건이 오면 그때까지 받은 글을 지우세요. `include_session`을 비우면 이전 대화를 넣고 문서를 만듭니다 |
 
 요청과 응답의 정확한 필드는 Swagger(`http://localhost:8000/docs`)에서 확인하세요.
 
@@ -229,9 +236,15 @@ backend/
 5. 새 컬렉션이나 필드는 `init_db.py`에 추가하고 `python init_db.py`(위 "실행" 4번)로 Atlas에 적용합니다.
 6. `tests/`에 테스트를 추가합니다.
 
+## AI 통합 상태
+
+`feature/backend-prototype`의 P5 엔진 이식을 반영했습니다. `main.py`는 `app/ai/` 엔진과 `services/ai_*`를 통해 인증된 프로젝트의 AI 실행을 처리하고, 대화·실행 기록·압축된 대화를 MongoDB에 저장합니다. 스트리밍, 중지, 사용량, 웹 검색, 참고 파일 읽기, 기록 검토안, 문서 초안·출처·변경 확인, TXT·MD·DOCX·PDF 내보내기를 포함합니다. 설계는 [AI 채팅 실행 설계](docs/superpowers/specs/2026-11-19-ai-chat-run-design.md)를 참고하세요.
+
+기존 `app/ai/p5/`와 `tests_unit/`는 독립 실험·회귀 검증용으로 유지합니다. P5의 SQLite 저장소는 `main.py`에서 사용하지 않으며, 이번 통합에 기존 SQLite 데이터의 MongoDB 이관 기능은 포함하지 않습니다. SSE 사건 대기열은 프로세스 메모리에 있으므로 서버 재시작 후 재생되지는 않습니다.
+
 ## 아직 없는 것
 
-- **AI 생성과 챗봇 답변**: 파이프라인 코드를 받아 백엔드에 이식할 예정입니다. 저장 구조는 준비돼 있습니다. 답변은 `services/chat.py`의 `add_message(role="ASSISTANT", doc=문서 초안)`, 다음에 해야 할 일은 프로젝트의 `next_action`, 글 저장은 `services/items.py`의 `save_item`·`create_item`, 프로젝트 내용은 `services/overview.py`의 `get_projection`을 쓰면 됩니다.
+- **다음 작업 제안**: 프로젝트의 `next_action`을 AI가 채우는 기능.
 - **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·프로젝트당 20개·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
 - **`ai_jobs.job_type`**: 작업이 다루는 기획 항목 `ck_01`~`ck_06` 중 하나입니다. `brand_id`는 선택이라 브랜드 없는 프로젝트의 작업도 만들 수 있습니다. 6개에 들지 않는 작업(`others`와 상세 문자열)은 아직 정하지 않았습니다.
 - **실제 화면**: `front/src/App.jsx`는 임시입니다.

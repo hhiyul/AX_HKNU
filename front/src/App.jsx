@@ -35,6 +35,7 @@ const PRESETS = [
     ['단계·메모', 'PATCH', '/projects/{project_id}', { stage: 'prototype', note: '체인 단가 확인', revision: 1 }],
     ['브랜드 연결', 'PATCH', '/projects/{project_id}', { brand_id: '{brand_id}', revision: 1 }],
     ['채팅 설정', 'PATCH', '/projects/{project_id}', { search_enabled: true, revision: 1 }],
+    ['참고 파일 지정', 'PATCH', '/projects/{project_id}', { file_refs: ['{asset_id}'], revision: 1 }],
     ['보관', 'PATCH', '/projects/{project_id}', { status: 'archived', revision: 1 }],
     ['복원', 'PATCH', '/projects/{project_id}', { status: 'active', revision: 2 }],
     ['개요', 'GET', '/projects/{project_id}/overview'],
@@ -56,6 +57,10 @@ const PRESETS = [
     ['AI 정리 목록', 'GET', '/projects/{project_id}/items/record'],
     ['산출물 만들기', 'POST', '/projects/{project_id}/items/document', { title: '상품기획서', content: '내용' }],
     ['산출물 목록', 'GET', '/projects/{project_id}/items/document'],
+    ['기획 내보내기 (md)', 'GET', '/projects/{project_id}/plan-export/md'],
+    ['기획 내보내기 (txt)', 'GET', '/projects/{project_id}/plan-export/txt'],
+    ['기획 내보내기 (docx)', 'GET', '/projects/{project_id}/plan-export/docx'],
+    ['기획 내보내기 (pdf)', 'GET', '/projects/{project_id}/plan-export/pdf'],
   ]],
   ['경제성', [
     ['조회 (비교 계산)', 'GET', '/projects/{project_id}/economics'],
@@ -67,6 +72,14 @@ const PRESETS = [
   ['채팅', [
     ['메시지 보내기', 'POST', '/projects/{project_id}/messages', { content: '상품 아이디어 좀' }],
     ['메시지 목록', 'GET', '/projects/{project_id}/messages'],
+    ['AI 답변 요청', 'POST', '/projects/{project_id}/runs', { text: '이 상품의 고객을 정리해 줘' }],
+    ['AI 문서 초안', 'POST', '/projects/{project_id}/runs', { text: '상품 기획서를 작성해 줘', mode: 'document' }],
+    ['AI 검색 답변 (검색 허용 필요)', 'POST', '/projects/{project_id}/runs', { text: '비슷한 수공예 팔찌 가격을 찾아 줘', public_search_terms: '수공예 팔찌 가격' }],
+    ['AI 파일 보고 답변', 'POST', '/projects/{project_id}/runs', { text: '붙인 파일 내용을 요약해 줘', asset_ids: ['{asset_id}'] }],
+    ['AI 기록 검토안', 'POST', '/projects/{project_id}/runs', { text: '지금까지 얘기한 고객 정보를 기록해 줘', mode: 'chat' }],
+    ['실행 상태', 'GET', '/projects/{project_id}/runs/{run_id}'],
+    ['실행 진행 사건', 'GET', '/projects/{project_id}/runs/{run_id}/stream'],
+    ['실행 중지', 'POST', '/projects/{project_id}/runs/{run_id}/stop'],
   ]],
   ['파일·작업·OpenAI', [
     ['브랜드 파일', 'GET', '/assets?brand_id={brand_id}'],
@@ -78,7 +91,7 @@ const PRESETS = [
   ]],
 ]
 
-const ID_FIELDS = ['brand_id', 'project_id', 'asset_id']
+const ID_FIELDS = ['brand_id', 'project_id', 'asset_id', 'run_id']
 
 function idFieldFor(path) {
   // /projects/{id}/items 같은 하위 자료의 id는 기억하지 않는다.
@@ -88,7 +101,7 @@ function idFieldFor(path) {
 }
 
 export default function App() {
-  const [ids, setIds] = useState({ brand_id: '', project_id: '', asset_id: '' })
+  const [ids, setIds] = useState({ brand_id: '', project_id: '', asset_id: '', run_id: '' })
   const [method, setMethod] = useState('GET')
   const [path, setPath] = useState('/auth/me')
   const [body, setBody] = useState('')
@@ -115,6 +128,10 @@ export default function App() {
     const field = idFieldFor(label.split(' ')[1] || '')
     if (field && data && typeof data === 'object' && !Array.isArray(data) && data.id) {
       setIds((prev) => ({ ...prev, [field]: data.id }))
+    }
+    // AI 답변 요청은 run_id를 돌려준다.
+    if (data && typeof data === 'object' && data.run_id) {
+      setIds((prev) => ({ ...prev, run_id: data.run_id }))
     }
     setLog((prev) => [{ label, status: response.status, data, at: new Date().toLocaleTimeString() }, ...prev])
   }

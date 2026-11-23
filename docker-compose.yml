@@ -27,6 +27,9 @@ services:
       MONGO_DETAILS: "${MONGO_DETAILS:-}"
       JWT_SECRET: "${JWT_SECRET:-}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      AI_PROVIDER: "${AI_PROVIDER:-demo}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-6-luna}"
       UPLOAD_DIR: /data/uploads
     volumes:
       - backend_uploads:/data/uploads
