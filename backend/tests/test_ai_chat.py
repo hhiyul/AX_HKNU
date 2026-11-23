@@ -191,7 +191,12 @@ async def test_compression_saves_capsule(db, setup):
     runtime = runtime_with(FakeProvider([answer("압축 뒤 답변")], count=count))
     run_id, task = await run(db, setup, runtime)
     await asyncio.wait_for(task, 5)
-    capsule = (await project_doc(db, setup))["chat_capsule"]
+    # 압축 요약은 대화마다 따로 둔다. 대화 전에 쌓인 메시지는 "이전 대화"로 옮겨져 거기서 압축된다.
+    conversation = await db.conversations.find_one({"project_id": project["_id"]})
+    assert conversation["title"] == "이전 대화"
+    saved = await project_doc(db, setup)
+    assert "chat_capsule" not in saved
+    capsule = saved["chat_capsules"][str(conversation["_id"])]
     assert capsule["revision"] == 1 and capsule["text"] == "요약" and len(capsule["covered_ids"]) == 2
     assert "compression_finished" in await kinds(runtime, run_id)
     assert (await db.ai_runs.find_one({"_id": run_id}))["status"] == "completed"

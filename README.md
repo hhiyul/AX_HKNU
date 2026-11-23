@@ -85,7 +85,9 @@ users (사용자)
  │   ├─ items                        프로젝트에 저장하는 글. kind로 구분한다
  │   │                                 plan 상품기획 6개 항목 · record AI와 함께 정리한 내용 · document 산출물
  │   ├─ cost_sheets                  경제성 입력값(프로젝트당 하나). 비교 결과는 조회할 때 계산한다
- │   ├─ messages                     AI 채팅 메시지
+ │   ├─ conversations                AI 채팅 대화 목록. 대화마다 이전 대화·압축 요약이 따로다
+ │   ├─ messages                     AI 채팅 메시지. 채팅은 conversation_id로 대화에 속한다(항목별 AI 메시지는 없음)
+ │   ├─ ledger_entries               정산 수입·지출 내역(휴지통·복원)
  │   └─ ai_runs                      AI 채팅 실행 기록(상태, 실패 사유, 토큰 사용량). 진행 중 잠금은 projects.active_run
  ├─ assets (파일)                    brand_id, project_id 중 하나 이상
  ├─ ai_jobs (AI 작업)
@@ -124,7 +126,11 @@ users (사용자)
 | 문서 출처 | `GET /items/document/{key}/changes` | AI가 만든 산출물이 참고한 기획 항목·정리 내용·참고 산출물·참고 파일이 그 뒤 바뀌었는지(`unchanged`·`changed`·`unavailable`) |
 | 경제성 | `GET·PUT /economics`, `POST /economics/baseline`, `POST /economics/confirm` | 입력 저장, 비교 기준 저장, 판매가 결정(`plan/ck_05`에 반영) |
 | AI 채팅 | `GET·POST /messages` | 메시지 목록과, AI 답변 없이 사용자 메시지만 저장 |
-| AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다. 본문: `text`, `mode`(`auto`·`chat`·`document`), `include_session`, `public_search_terms`, `asset_ids`(이번에 붙인 파일), `reference_document`·`reference_body`(문서 모드에서 참고할 산출물). AI는 프로젝트의 참고 파일(`file_refs`)과 붙인 파일 중 TXT·MD·DOCX를 읽습니다. 기록 검토안은 `record_candidate` 사건과 답변의 `record_draft`로 옵니다. 웹 검색은 프로젝트의 `search_enabled`가 켜져 있을 때만 합니다. 문서 모드에서 끝까지 만든 답변은 메시지의 `doc`에 남고 `document_candidate` 사건이 옵니다. `document_route` 사건이 오면 그때까지 받은 글을 지우세요. `include_session`을 비우면 이전 대화를 넣고 문서를 만듭니다 |
+| 전용 문서(v05) | `GET /templates`, `GET·POST /docs`, `GET·PATCH·DELETE /docs/{doc_id}`, `POST /docs/{doc_id}/restore`, `PUT·DELETE .../sections/{sid}/draft`, `PUT .../sections/{sid}`, `POST .../sections/{sid}/review`, `GET /docs/{doc_id}/preview`, `GET /docs/{doc_id}/export/{md·txt·docx·pdf}` | 펀딩 상세페이지(F01~F08, 필수 6)·사업계획서(B01~B08, 필수 8)를 항목별로 씁니다. 항목 상태는 `UNWRITTEN`·`WRITING`·`REVIEWED`, 진행도는 확인한 필수 항목 수입니다. 설계는 `docs/superpowers/specs/2026-11-24-v05-structured-docs-design.md` |
+| 항목별 AI(v05) | `POST .../sections/{sid}/assist`, `POST .../sections/{sid}/apply`, `GET .../sections/{sid}/messages`, `POST .../sections/{sid}/task-proposals` | 고른 참고만 보내 후보(답변의 `candidate`)를 만들고, 적용하면 임시 입력에만 들어갑니다. 후보 뒤에 글이 바뀌었으면 409 `CANDIDATE_OUTDATED`. 할 일 후보는 답변의 `proposals`이고 아직 일정이 아닙니다 |
+| 할 일(v05) | `GET·POST /tasks`, `PATCH·DELETE /tasks/{task_id}`, `POST /tasks/{task_id}/restore` | 날짜 필수. 같은 AI 후보(`source_proposal_id`)는 한 번만 등록되고 다시 보내면 기존 일정(200, `existing`). `source`로 원래 문서 항목에 돌아갑니다 |
+| 홈(v05) | `GET /home?brand_id=&today=` | 계정 전체(또는 브랜드)의 최근 문서·오늘 할 일·기한 지난 일·진행 중 문서·규칙 기반 추천 |
+| AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다. 본문: `text`, `mode`(`auto`·`chat`·`document`), `include_session`, `public_search_terms`, `asset_ids`(이번에 붙인 파일), `reference_document`·`reference_body`(문서 모드에서 참고할 산출물). 첨부 파일 내용은 기본으로 AI에 보내지 않습니다(`AI_READ_ATTACHMENTS=true`면 TXT·MD·DOCX를 읽음). 기록 검토안은 `record_candidate` 사건과 답변의 `record_draft`로 옵니다. 웹 검색은 프로젝트의 `search_enabled`가 켜져 있을 때만 합니다. 문서 모드에서 끝까지 만든 답변은 메시지의 `doc`에 남고 `document_candidate` 사건이 옵니다. `document_route` 사건이 오면 그때까지 받은 글을 지우세요. `include_session`을 비우면 이전 대화를 넣고 문서를 만듭니다 |
 
 요청과 응답의 정확한 필드는 Swagger(`http://localhost:8000/docs`)에서 확인하세요.
 

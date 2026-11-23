@@ -138,6 +138,17 @@ class MessageOut(BaseModel):
     doc: dict[str, Any] | None = None
     # AI가 만든 기록 검토안 {title, content}. "검수하고 저장하기"의 기본값
     record_draft: dict[str, Any] | None = None
+    # 항목별 AI(document_assist)·할 일 제안(task_proposal)의 연결 정보
+    purpose: str | None = None
+    # 채팅 대화. 항목별 AI·할 일 제안 메시지는 null
+    conversation_id: str | None = None
+    target_doc_id: str | None = None
+    target_section_id: str | None = None
+    request_id: str | None = None
+    # 항목별 AI 후보 {doc_id, section_id, base_revision, base_draft_revision, text, references}
+    candidate: dict[str, Any] | None = None
+    # 할 일 후보 [{proposal_id, title, suggested_date, note, task_id, task_status}]. 등록했으면 task_id가 있다
+    proposals: list[dict[str, Any]] | None = None
     # 이 답변에서 저장한 정리 내용과 산출물. 저장하지 않았으면 null.
     record_key: str | None = None
     doc_key: str | None = None

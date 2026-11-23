@@ -19,6 +19,15 @@ from app.ai.runtime import Runtime, set_runtime
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 
+@pytest.fixture(autouse=True)
+def read_attachments_on(monkeypatch):
+    """이 파일은 첨부 읽기를 켠 경우(AI_READ_ATTACHMENTS=true)를 시험한다. 기본은 꺼져 있다."""
+    from app.config import Settings
+    from app.services import ai_chat
+
+    monkeypatch.setattr(ai_chat, "get_settings", lambda: Settings(ai_read_attachments=True))
+
+
 @pytest.fixture
 async def setup(client, login, db):
     me = await login(client)

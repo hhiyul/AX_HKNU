@@ -155,9 +155,18 @@ async def reap_stale(db: AsyncDatabase, project_id: ObjectId | None = None) -> i
     return reaped
 
 
-async def load_capsule(db: AsyncDatabase, project_id: ObjectId) -> dict | None:
-    project = await db.projects.find_one({"_id": project_id}, {"chat_capsule": 1})
-    return (project or {}).get("chat_capsule")
+def _capsule_field(conversation_id: ObjectId | None) -> str:
+    """압축 요약은 대화마다 따로 둔다. 대화가 없던 예전 실행은 프로젝트의 chat_capsule 하나를 쓴다."""
+    return f"chat_capsules.{conversation_id}" if conversation_id else "chat_capsule"
+
+
+async def load_capsule(db: AsyncDatabase, project_id: ObjectId, conversation_id: ObjectId | None = None) -> dict | None:
+    field = _capsule_field(conversation_id)
+    project = await db.projects.find_one({"_id": project_id}, {field: 1})
+    value = project or {}
+    for part in field.split("."):
+        value = (value or {}).get(part)
+    return value
 
 
 async def save_capsule(
@@ -168,16 +177,18 @@ async def save_capsule(
     text: str,
     covered_ids: list[str],
     source_ids: list[str] | None = None,
+    conversation_id: ObjectId | None = None,
 ) -> int:
     """요약 번호와 실행 잠금이 맞을 때만 압축한 예전 대화를 바꾼다. 프로젝트 revision은 건드리지 않는다."""
+    field = _capsule_field(conversation_id)
     if expected_revision == 0:
-        matches_revision: dict = {"$or": [{"chat_capsule": None}, {"chat_capsule.revision": 0}]}
+        matches_revision: dict = {"$or": [{field: None}, {f"{field}.revision": 0}]}
     else:
-        matches_revision = {"chat_capsule.revision": expected_revision}
+        matches_revision = {f"{field}.revision": expected_revision}
     revision = expected_revision + 1
     result = await db.projects.update_one(
         {"_id": project_id, "active_run": run_id, **matches_revision},
-        {"$set": {"chat_capsule": {
+        {"$set": {field: {
             "text": text, "covered_ids": covered_ids, "source_ids": list(source_ids or []), "revision": revision,
         }}},
     )

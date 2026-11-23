@@ -27,6 +27,11 @@ async def _file(body: str, fmt: str, name: str) -> dict:
     return {"content": data, "media_type": media_type, "headers": {"Content-Disposition": disposition}}
 
 
+async def markdown_export(body: str, fmt: str, name: str) -> dict:
+    """Markdown 글을 형식에 맞는 파일 응답으로 바꾼다(항목형 문서의 합친 글 등)."""
+    return await _file(body, fmt, name)
+
+
 async def document_export(db: AsyncDatabase, project_id: ObjectId, key: str, fmt: str) -> dict:
     document = await items.get_item(db, project_id, "document", key)
     return await _file(document["content"] or "", fmt, document["title"] or "산출물")

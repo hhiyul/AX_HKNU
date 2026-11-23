@@ -25,6 +25,7 @@ async def start_run(body: schema.RunCreate, ws: Workspace = Depends()):
     run_id = await ai_chat.start_run(
         ws.db, get_runtime(), ws.user_id, ws.project, body.text, body.public_search_terms,
         body.mode, body.include_session, body.asset_ids, body.reference_document, body.reference_body,
+        body.conversation_id,
     )
     return {"run_id": str(run_id)}
 

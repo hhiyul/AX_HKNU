@@ -134,6 +134,7 @@ class ToolBox:
         search_allowed: Callable[[], Awaitable[bool]],
         route_offered: bool = False,
         record_offered: bool = False,
+        read_offered: bool = True,
     ):
         self.emit = emit
         self.provider = provider
@@ -141,7 +142,7 @@ class ToolBox:
         self.search_allowed = search_allowed
         self.public_search_terms = public_search_terms
         self.allowed_words = set(re.findall(r"\w+", public_search_terms.casefold()))
-        self.tools: list[dict] = [ai_context.READ_TOOL]
+        self.tools: list[dict] = [ai_context.READ_TOOL] if read_offered else []
         self.extra_prefix: list[dict] = []
         if search_enabled:
             self.tools.append(GENERAL_SEARCH_TOOL)
