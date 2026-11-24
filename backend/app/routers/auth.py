@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from pymongo.asynchronous.database import AsyncDatabase
 from pymongo.errors import DuplicateKeyError
 
@@ -9,6 +9,7 @@ from app.deps import current_user
 from app.errors import AppError
 from app.schemas.auth import LoginRequest, SignupRequest, UserOut
 from app.schemas.common import to_api
+from app.services import rate_limit
 from app.services.auth import (
     clear_auth_cookie,
     hash_password,
@@ -41,11 +42,15 @@ async def signup(body: SignupRequest, response: Response, db: AsyncDatabase = De
 
 
 @router.post("/login", response_model=UserOut)
-async def login(body: LoginRequest, response: Response, db: AsyncDatabase = Depends(get_db)):
+async def login(body: LoginRequest, request: Request, response: Response, db: AsyncDatabase = Depends(get_db)):
     require_auth_configured()
+    address = rate_limit.client_address(request)
+    rate_limit.check_login(body.email, address)
     user = await db.users.find_one({"email": body.email})
     if not await verify_password(body.password, user["password_hash"] if user else None):
+        rate_limit.login_failed(body.email, address)
         raise AppError(401, "INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.")
+    rate_limit.login_succeeded(body.email)
     set_auth_cookie(response, user["_id"])
     return to_api(user)
 

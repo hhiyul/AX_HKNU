@@ -6,7 +6,8 @@ from app.ai.context import history_summary_text
 from app.services import ai_context, chat
 from app.services.store import utcnow
 
-OWN_KEYS = ["project_basic", "linked_brand", *[f"ck_0{n}" for n in range(1, 7)]]
+# 빈 프로젝트도 오늘 날짜는 늘 넘긴다(문서·일정·원가·정산·메모는 있을 때만).
+OWN_KEYS = ["project_basic", "linked_brand", *[f"ck_0{n}" for n in range(1, 7)], "today"]
 
 
 @pytest.fixture

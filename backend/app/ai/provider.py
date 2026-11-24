@@ -185,7 +185,7 @@ class OpenAIProvider:
                             usage = valid_usage(result.get("usage")) if isinstance(result, dict) else None
                             if usage is not None:
                                 yield {"type": "usage", **usage}
-                            raise ProviderError("STREAM_FAILED", Delivery.RESPONDED)
+                            raise ProviderError(_stream_failure_code(event), Delivery.RESPONDED)
         except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout):
             raise ProviderError("CONNECTION_FAILED", Delivery.NOT_DISPATCHED) from None
         except httpx.HTTPError:
@@ -223,6 +223,21 @@ class OpenAIProvider:
             exc.usage = valid_usage(data.get("usage"))
             raise exc
         return SearchResult({"text": "".join(texts), "urls": list(dict.fromkeys(urls))}, data.get("usage"))
+
+
+# 모델 쪽 안전 정책이 막은 요청(예: cyber_policy). 연결 문제와 구분해 사용자에게 알린다.
+POLICY_CODES = ("policy", "content_filter", "safety", "moderation", "flagged")
+
+
+def _stream_failure_code(event: dict) -> str:
+    """실패 사건의 오류 코드가 안전 정책이면 POLICY_BLOCKED, 아니면 STREAM_FAILED."""
+    errors = [event.get("error"), (event.get("response") or {}).get("error") if isinstance(event.get("response"), dict) else None]
+    for error in errors:
+        if isinstance(error, dict):
+            code = str(error.get("code") or "").lower()
+            if any(word in code for word in POLICY_CODES):
+                return "POLICY_BLOCKED"
+    return "STREAM_FAILED"
 
 
 class DemoProvider:

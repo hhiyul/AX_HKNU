@@ -13,12 +13,15 @@ from app.services.store import not_found, owned_ids, recent_push, utcnow
 
 
 async def list_messages(db: AsyncDatabase, project_id: ObjectId, page, conversation_id: ObjectId | None = None) -> list[dict]:
-    """conversation_id를 주면 그 대화의 메시지만, 비우면 프로젝트의 모든 메시지(예전 화면과 호환)."""
-    query: dict = {"project_id": project_id}
-    if conversation_id is not None:
-        query["conversation_id"] = conversation_id
-    cursor = db.messages.find(query).sort("ordinal", 1)
-    return await cursor.skip(page.skip).limit(page.limit).to_list()
+    """conversation_id를 주면 그 대화의 최근 메시지 limit개를 시간순으로 준다(skip은 최근 쪽부터 건너뛸 개수).
+    긴 대화에서도 방금 주고받은 메시지가 빠지지 않게 하려는 것이다.
+    비우면 프로젝트의 모든 메시지를 처음부터 준다(예전 화면과 호환)."""
+    if conversation_id is None:
+        cursor = db.messages.find({"project_id": project_id}).sort("ordinal", 1)
+        return await cursor.skip(page.skip).limit(page.limit).to_list()
+    cursor = db.messages.find({"project_id": project_id, "conversation_id": conversation_id}).sort("ordinal", -1)
+    newest_first = await cursor.skip(page.skip).limit(page.limit).to_list()
+    return newest_first[::-1]
 
 
 async def add_message(

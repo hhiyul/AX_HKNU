@@ -13,7 +13,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.ai.context import history_summary_text
 from app.schemas.projects import MAX_CHIP_REFS
-from app.services import ai_runs, overview
+from app.services import ai_runs, ai_workspace, overview
 from app.services.assets import DOCX_TYPE, decode_text
 from app.storage import file_path
 
@@ -33,7 +33,8 @@ READ_TOOL = {
     "name": "read_project_sections",
     "description": (
         "Read sections of this project or its reference projects already supplied in context. "
-        "Keys: project_basic, linked_brand, ck_01..ck_06, or ref:<project_id>:<section> for a reference project."
+        "Keys: project_basic, linked_brand, ck_01..ck_06, today, doc:<id> (saved document sections), tasks, "
+        "economics, ledger, project_memo, or ref:<project_id>:<section> for a reference project."
     ),
     "parameters": {
         "type": "object",
@@ -73,6 +74,8 @@ async def _record_sections(db: AsyncDatabase, project_id: ObjectId) -> dict[str,
 async def build_sections(db: AsyncDatabase, project: dict, user_id: ObjectId) -> dict[str, dict]:
     sections = {key: {**value, "source": "this_project"} for key, value in (await _sections_of(db, project)).items()}
     sections.update(await _record_sections(db, project["_id"]))
+    # 오늘 날짜·문서·일정·원가·정산·메모(이 프로젝트만. 참고 프로젝트는 기획 항목만 넘긴다)
+    sections.update({key: {**value, "source": "this_project"} for key, value in (await ai_workspace.workspace_sections(db, project)).items()})
     for reference in await _references(db, project, user_id):
         for key, value in (await _sections_of(db, reference)).items():
             sections[f"ref:{reference['_id']}:{key}"] = {

@@ -12,7 +12,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 from app.ai.context import Budget, ContextError, prepare
 from app.ai.runtime import Runtime
 from app.errors import AppError
-from app.services import ai_chat, ai_tools, items, structured_docs, tasks, templates
+from app.services import ai_chat, ai_tools, ai_workspace, items, structured_docs, tasks, templates
 from app.services.store import conflict, not_found, parse_object_id, utcnow
 
 PURPOSE = "document_assist"
@@ -89,7 +89,9 @@ class AssistJob(ai_chat._RunJob):
             "key": "target_section", "doc_title": t["doc_title"], "section_id": t["section_id"], "title": t["title"],
             "question": t["question"], "saved_text": t["text"], "draft": t["draft"],
         }
-        return [section, *({"key": "reference", **reference} for reference in t["references"])]
+        # 오늘 날짜(한국)는 "다음 주 금요일" 같은 말을 날짜로 바꿀 때 쓴다.
+        today = {"key": "today", **ai_workspace.today_section()}
+        return [section, *({"key": "reference", **reference} for reference in t["references"]), today]
 
     def _instruction(self) -> str:
         t = self.target

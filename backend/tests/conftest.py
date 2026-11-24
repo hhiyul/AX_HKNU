@@ -49,7 +49,12 @@ async def db(schema):
 
 @pytest_asyncio.fixture
 async def client(db):
+    from app.services import rate_limit
     from main import app
+
+    # 로그인 실패 기록은 서버 메모리에 남으므로 테스트마다 비운다.
+    rate_limit.emails.hits.clear()
+    rate_limit.addresses.hits.clear()
 
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as http:
