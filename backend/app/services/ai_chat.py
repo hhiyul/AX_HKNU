@@ -51,6 +51,7 @@ REASONS = {
     "CREDIT_EXHAUSTED": "AI 크레딧이 부족합니다. 관리자에게 알려 주세요.",
     "RATE_LIMITED": "요청이 많아 잠시 막혔습니다. 1분쯤 뒤에 다시 시도해 주세요.",
     "ACCESS_DENIED": "이 키로 쓸 수 없는 모델이거나 접근이 막혔습니다. AI 설정을 확인해 주세요.",
+    "POLICY_BLOCKED": "AI 안전 정책상 답할 수 없는 요청이에요. 작품을 상품으로 만드는 일에 관한 질문으로 다시 보내 주세요.",
 }
 DEFAULT_REASON = "요청을 완료하지 못했습니다. 입력과 연결 상태를 확인해 주세요."
 DEFAULT_DOC_TITLE = "생성 문서"

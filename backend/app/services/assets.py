@@ -12,6 +12,8 @@ from app.services.store import get_owned_asset, get_owned_brand, get_owned_proje
 from app.storage import delete_file, save_file
 
 MAX_FILE_SIZE = 2 * 1024 * 1024
+# 프로젝트 하나에 올릴 수 있는 파일 수(프로토타입과 같음). 브랜드에만 속한 파일은 세지 않는다.
+MAX_PROJECT_ASSETS = 20
 MAX_NAME_LENGTH = 255
 DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -77,6 +79,8 @@ async def create_asset(
     if brand and project and project.get("brand_id") != brand["_id"]:
         raise not_found()
 
+    if project and await db.assets.count_documents({"project_id": project["_id"]}) >= MAX_PROJECT_ASSETS:
+        raise AppError(409, "ASSET_LIMIT", f"프로젝트에는 파일을 {MAX_PROJECT_ASSETS}개까지 올릴 수 있습니다. 쓰지 않는 파일을 지운 뒤 다시 올려 주세요.")
     data = await file.read(MAX_FILE_SIZE + 1)
     if len(data) > MAX_FILE_SIZE:
         raise AppError(413, "FILE_TOO_LARGE", "파일은 2MB까지 올릴 수 있습니다.")

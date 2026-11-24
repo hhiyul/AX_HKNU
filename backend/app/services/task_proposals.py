@@ -11,7 +11,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.ai.context import Budget, ContextError, prepare
 from app.ai.runtime import Runtime
-from app.services import ai_chat, doc_assist
+from app.services import ai_chat, doc_assist, home
 
 PURPOSE = "task_proposal"
 MAX_PROPOSALS = 5
@@ -47,8 +47,9 @@ SUGGEST_TOOL = {
 INSTRUCTION = (
     "From the section text and selected references, suggest concrete tasks the creator must do next "
     "(for example confirming quotes or production schedules). Call suggest_tasks once. Titles in Korean, short. "
-    "Use a date only if it is written in the material (YYYY-MM-DD); otherwise null. If nothing needs doing, answer in "
-    "Korean without calling the tool."
+    "Use a date only if the material states it; otherwise null. Write dates as YYYY-MM-DD. If the material gives a "
+    "relative date (for example 다음 주 금요일), convert it using the supplied today entry. Never suggest a date "
+    "before today. If nothing needs doing, answer in Korean without calling the tool."
 )
 
 
@@ -62,7 +63,8 @@ def _valid_date(value) -> bool:
     return isinstance(value, str) and len(value) == 10
 
 
-def parse_proposals(arguments: str) -> list[dict]:
+def parse_proposals(arguments: str, today: dt.date | None = None) -> list[dict]:
+    """today를 주면 그보다 앞선 날짜는 비운다(지난 날짜는 일정으로 제안하지 않는다)."""
     try:
         args = json.loads(arguments or "{}")
     except (TypeError, ValueError):
@@ -78,8 +80,11 @@ def parse_proposals(arguments: str) -> list[dict]:
             raise ContextError("INVALID_TOOL_ARGUMENTS")
         if not _valid_date(task.get("date")):
             raise ContextError("INVALID_TOOL_ARGUMENTS")
+        date = task.get("date")
+        if date is not None and today is not None and dt.date.fromisoformat(date) < today:
+            date = None
         proposals.append({
-            "proposal_id": ObjectId(), "title": title.strip(), "suggested_date": task.get("date"), "note": note[:1000],
+            "proposal_id": ObjectId(), "title": title.strip(), "suggested_date": date, "note": note[:1000],
         })
     return proposals
 
@@ -102,7 +107,7 @@ class ProposalJob(doc_assist.AssistJob):
         if any(call.get("name") != "suggest_tasks" for call in calls) or len(calls) > 1:
             raise ContextError("TOOL_NOT_ALLOWED")
         if calls:
-            self.proposals = parse_proposals(calls[0].get("arguments"))
+            self.proposals = parse_proposals(calls[0].get("arguments"), home.korean_today())
             found = f"할 일 후보 {len(self.proposals)}개를 찾았습니다. 확인한 것만 일정에 등록하세요."
             self.pieces = [found if self.proposals else "지금 정보로는 제안할 할 일이 없습니다."]
 

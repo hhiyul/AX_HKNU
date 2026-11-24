@@ -20,9 +20,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    # 디버깅용 직접 접근 (Swagger). 평소엔 react-front의 /api 경유
+    # 디버깅용 직접 접근 (Swagger). 서버 안(127.0.0.1)에서만 열린다. 바깥에서는 react-front의 /api로만 들어온다.
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     environment:
       MONGO_DETAILS: "${MONGO_DETAILS:-}"
       JWT_SECRET: "${JWT_SECRET:-}"

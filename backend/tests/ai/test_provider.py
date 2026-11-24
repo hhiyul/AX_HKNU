@@ -168,3 +168,23 @@ async def test_dated_snapshot_of_configured_model_is_accepted(reported, ok):
     else:
         with pytest.raises(ProviderError):
             [e async for e in client.stream(wire)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error,expected", [
+    # 게이트웨이가 실제로 보낸 모양(유해 요청을 모델 쪽 안전 정책이 막음)
+    ({"type": "invalid_request", "code": "cyber_policy", "message": "flagged"}, "POLICY_BLOCKED"),
+    ({"type": "invalid_request", "code": "content_filter"}, "POLICY_BLOCKED"),
+    ({"type": "server_error", "code": "server_error"}, "STREAM_FAILED"),
+    (None, "STREAM_FAILED"),
+])
+async def test_policy_blocks_are_told_apart_from_stream_failures(error, expected):
+    async def handler(request):
+        events = [{"type": "error", "error": error}] if error else []
+        events.append({"type": "response.failed", "response": {"status": "failed", "error": error}})
+        text = "".join("data: " + json.dumps(event) + "\n\n" for event in events)
+        return httpx.Response(200, text=text, headers={"content-type": "text/event-stream"})
+    client = OpenAIProvider("sk-fake-test", "gpt-6-luna", httpx.MockTransport(handler))
+    with pytest.raises(ProviderError) as caught:
+        [e async for e in client.stream({"model": "gpt-6-luna", "input": [], "tools": []})]
+    assert caught.value.code == expected
