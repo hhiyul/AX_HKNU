@@ -10,7 +10,8 @@ DraftStatus = Literal["draft", "completed"]
 
 
 class BrandCreate(RequestModel):
-    brand_type: BrandType
+    # 이름과 소개만으로 브랜드를 만들 수 있다. 종류를 보내지 않으면 이미 운영 중인 브랜드로 본다.
+    brand_type: BrandType = "existing"
     name: ShortText = None
     description: LongText = None
     target_customer: LongText = None

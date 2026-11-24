@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings
 
@@ -8,6 +9,16 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     cookie_secure: bool = False
     upload_dir: str = "/data/uploads"
+    # AI 채팅. demo는 실제 호출 없는 모의 응답이고, openai로 바꾸면 비용이 든다.
+    ai_provider: Literal["demo", "openai"] = "demo"
+    openai_api_key: str = ""
+    openai_model: str = "gpt-6-luna"
+    # OpenAI 호환 주소. OpenAI는 https://api.openai.com/v1, BAZE 게이트웨이는 https://api.baze.co/v1/gateway
+    openai_base_url: str = "https://api.openai.com/v1"
+    # 비우면 OpenAI는 none, 게이트웨이는 low. 게이트웨이는 low·medium·high만 받는다.
+    openai_reasoning_effort: Literal["", "none", "low", "medium", "high"] = ""
+    # 기획서 v2: 첨부 원본은 AI가 자동으로 읽지 않는다. true면 참고 파일의 TXT·MD·DOCX를 읽어 넘긴다.
+    ai_read_attachments: bool = False
 
 
 @lru_cache

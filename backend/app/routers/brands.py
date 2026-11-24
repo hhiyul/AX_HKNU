@@ -2,18 +2,20 @@ from fastapi import APIRouter, Depends, status
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.db import get_db
-from app.deps import current_user
+from app.deps import Page, current_user
 from app.schemas.brands import BrandCreate, BrandOut, BrandUpdate
 from app.schemas.common import to_api
 from app.services import brands as service
-from app.services.ownership import get_owned_brand
+from app.services.store import get_owned_brand
 
 router = APIRouter(prefix="/brands", tags=["brands"])
 
 
 @router.get("", response_model=list[BrandOut])
-async def list_brands(user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)):
-    return to_api(await service.list_brands(db, user["_id"]))
+async def list_brands(
+    page: Page = Depends(), user: dict = Depends(current_user), db: AsyncDatabase = Depends(get_db)
+):
+    return to_api(await service.list_brands(db, user["_id"], page))
 
 
 @router.post("", response_model=BrandOut, status_code=status.HTTP_201_CREATED)

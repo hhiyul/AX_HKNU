@@ -119,7 +119,7 @@ async def test_korean_and_traversal_filename(client, login):
 async def test_project_must_belong_to_brand(client, login):
     await login(client)
     first, second = await create_brand(client), await create_brand(client)
-    project = (await client.post("/projects", json={"brand_id": first["id"]})).json()
+    project = (await client.post("/projects", json={"name": "상품", "brand_id": first["id"]})).json()
     assert (await upload(client, second["id"], project_id=project["id"])).status_code == 404
     res = await upload(client, first["id"], project_id=project["id"])
     assert res.status_code == 201
@@ -176,27 +176,52 @@ async def test_delete_clears_logo_and_file(client, login):
     assert (await client.get(f"/assets/{asset['id']}")).status_code == 404
 
 
-async def test_delete_project_blocked_by_asset(client, login):
+async def test_delete_project_keeps_brand_files_and_removes_its_own(client, login):
     await login(client)
     brand = await create_brand(client)
-    project = (await client.post("/projects", json={"brand_id": brand["id"]})).json()
-    asset = (await upload(client, brand["id"], project_id=project["id"])).json()
-    res = await client.delete(f"/projects/{project['id']}")
-    assert res.status_code == 409
-    assert res.json()["code"] == "PROJECT_IN_USE"
-    await client.delete(f"/assets/{asset['id']}")
+    project = (await client.post("/projects", json={"name": "상품", "brand_id": brand["id"]})).json()
+    shared = (await upload(client, brand["id"], project_id=project["id"])).json()
+    res = await client.post(
+        "/assets",
+        data={"project_id": project["id"], "asset_type": "document"},
+        files={"file": ("memo.md", "# 메모".encode(), "text/markdown")},
+    )
+    assert res.status_code == 201, res.text
+    own = res.json()
+    assert own["brand_id"] is None and own["mime_type"] == "text/markdown"
     assert (await client.delete(f"/projects/{project['id']}")).status_code == 204
+    # 휴지통에 있는 동안에는 파일도 그대로다.
+    assert (await client.get(f"/assets/{own['id']}")).status_code == 200
+    assert (await client.delete(f"/projects/{project['id']}", params={"permanent": "true"})).status_code == 204
+    # 브랜드에도 속한 파일은 연결만 풀리고, 프로젝트에만 속한 파일은 지워진다.
+    kept = (await client.get(f"/assets/{shared['id']}")).json()
+    assert kept["project_id"] is None
+    assert (await client.get(f"/assets/{own['id']}")).status_code == 404
+    assert shared["id"] in stored_files() and own["id"] not in stored_files()
 
 
-async def test_delete_brand_blocked_by_asset(client, login):
+async def test_upload_needs_brand_or_project(client, login):
+    await login(client)
+    res = await client.post(
+        "/assets", data={"asset_type": "logo"}, files={"file": ("logo.png", PNG, "image/png")}
+    )
+    assert res.status_code == 422
+    assert res.json()["code"] == "ASSET_OWNER_REQUIRED"
+    assert (await client.get("/assets")).status_code == 422
+
+
+async def test_delete_brand_removes_its_own_files_only(client, login):
     await login(client)
     brand = await create_brand(client)
-    asset = (await upload(client, brand["id"])).json()
-    res = await client.delete(f"/brands/{brand['id']}")
-    assert res.status_code == 409
-    assert res.json()["code"] == "BRAND_IN_USE"
-    await client.delete(f"/assets/{asset['id']}")
+    project = (await client.post("/projects", json={"name": "상품", "brand_id": brand["id"]})).json()
+    logo = (await upload(client, brand["id"])).json()
+    shared = (await upload(client, brand["id"], project_id=project["id"])).json()
     assert (await client.delete(f"/brands/{brand['id']}")).status_code == 204
+    # 브랜드에만 속한 파일은 지워지고, 프로젝트에도 속한 파일은 프로젝트에 남는다.
+    assert (await client.get(f"/assets/{logo['id']}")).status_code == 404
+    kept = (await client.get(f"/assets/{shared['id']}")).json()
+    assert kept["brand_id"] is None and kept["project_id"] == project["id"]
+    assert logo["id"] not in stored_files() and shared["id"] in stored_files()
 
 
 async def test_upload_requires_login(client):

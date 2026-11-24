@@ -1,12 +1,33 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
+from pymongo import ReturnDocument
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.errors import AppError
 from app.schemas.brands import BrandCreate, BrandUpdate
-from app.services.drafts import ensure_completable, save_changes
-from app.services.ownership import get_owned_brand, not_found, parse_object_id
+from app.services.store import get_owned_brand, not_found, parse_object_id, remove_jobs
+from app.storage import delete_file
+
+
+def ensure_completable(brand: dict, changes: dict) -> None:
+    merged = {**brand, **changes}
+    if merged.get("status") == "completed" and not merged.get("name"):
+        raise AppError(422, "NAME_REQUIRED", "완료하려면 이름을 입력해 주세요.")
+
+
+async def save_changes(db: AsyncDatabase, brand: dict, changes: dict) -> dict:
+    if not changes:
+        return brand
+    updated = await db.brands.find_one_and_update(
+        {"_id": brand["_id"]},
+        {"$set": {**changes, "updated_at": datetime.now(timezone.utc)}},
+        return_document=ReturnDocument.AFTER,
+    )
+    if updated is None:
+        # 수정하는 사이에 다른 요청이 지운 경우
+        raise not_found()
+    return updated
 
 
 async def create_brand(db: AsyncDatabase, user_id: ObjectId, body: BrandCreate) -> dict:
@@ -23,8 +44,9 @@ async def create_brand(db: AsyncDatabase, user_id: ObjectId, body: BrandCreate) 
     return brand
 
 
-async def list_brands(db: AsyncDatabase, user_id: ObjectId) -> list[dict]:
-    return await db.brands.find({"user_id": user_id}).sort("created_at", -1).to_list()
+async def list_brands(db: AsyncDatabase, user_id: ObjectId, page) -> list[dict]:
+    cursor = db.brands.find({"user_id": user_id}).sort("created_at", -1)
+    return await cursor.skip(page.skip).limit(page.limit).to_list()
 
 
 async def update_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str, body: BrandUpdate) -> dict:
@@ -33,15 +55,24 @@ async def update_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str, body
     ensure_completable(brand, changes)
     if changes.get("logo_asset_id") is not None:
         logo_id = parse_object_id(changes["logo_asset_id"])
-        if await db.assets.find_one({"_id": logo_id, "brand_id": brand["_id"]}) is None:
+        logo = await db.assets.find_one({"_id": logo_id, "brand_id": brand["_id"]})
+        if logo is None:
             raise not_found()
+        if not logo["mime_type"].startswith("image/"):
+            raise AppError(422, "LOGO_NOT_IMAGE", "로고는 이미지 파일만 지정할 수 있습니다.")
         changes["logo_asset_id"] = logo_id
-    return await save_changes(db.brands, brand, changes)
+    return await save_changes(db, brand, changes)
 
 
 async def delete_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str) -> None:
     brand = await get_owned_brand(db, user_id, brand_id)
-    in_use = {"brand_id": brand["_id"]}
-    if await db.projects.find_one(in_use) or await db.assets.find_one(in_use):
-        raise AppError(409, "BRAND_IN_USE", "브랜드에 상품이나 파일이 남아 있습니다.")
+    ident = {"brand_id": brand["_id"]}
+    await remove_jobs(db, ident, AppError(409, "BRAND_IN_USE", "브랜드에 진행 중인 작업이 있습니다."))
+    # 브랜드 정보만 지운다. 연결된 프로젝트와 그 자료는 "브랜드 없음"으로 남긴다.
+    await db.projects.update_many(ident, {"$set": {"brand_id": None}})
+    await db.assets.update_many({**ident, "project_id": {"$ne": None}}, {"$set": {"brand_id": None}})
+    # 브랜드에만 속한 파일(로고 등)은 함께 지운다.
+    async for asset in db.assets.find(ident):
+        await db.assets.delete_one({"_id": asset["_id"]})
+        await delete_file(asset["_id"])
     await db.brands.delete_one({"_id": brand["_id"]})
