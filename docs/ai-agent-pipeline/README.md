@@ -1,16 +1,17 @@
 # AI 에이전트 파이프라인 명세
 
-AX Studio의 사용자 기능과 AI 파이프라인·모듈 설계를 관리하는 디렉터리입니다. **2026-11-23 현재: 통합 코드 `a4f3af7`을 근거로 문서 작성 중심 사용자 기능명세 v0.3을 개정한 검토 단계입니다.** 기존 구현은 존재하지만 새 MVP 구현·인수 완료를 뜻하지 않습니다. 워터폴/V 방식으로 사용자 요구–인수 기준을 먼저 연결합니다.
+AX Studio의 사용자 기능과 AI 파이프라인·모듈 설계를 관리합니다. **2026-11-23 현재: v0.3-R1에 후속 1A/2A/3A를 반영해 세 제품 정합 사항을 종결하고 설계 입력을 정리했습니다.** 통합 코드 기준은 `a4f3af7`이며 새 MVP 구현·인수 완료를 뜻하지 않습니다. 다음은 워터폴/V의 G-S 시스템 설계입니다.
 
 ## 현재 상태와 읽기 순서
 
 | 순서 | 문서 | 현재 역할 |
 | --- | --- | --- |
-| 1 | [사용자 기능명세 v0.3](02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md) | 두 문서 작성·항목 AI·단일 대화·할 일·홈·문서 휴지통의 현재 기준. 14개 기능·42개 요구 |
-| 2 | [MVP 결정·변경 기록](02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md) | A 및 1A/2A/3A 명시 채택, 작성 기본안, 이전 결정 대체 범위, 동결 전 미결 |
-| 3 | [요구사항–인수 추적표](02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md) | 50개 인수 사례, V 단계 종료 조건, 모든 신규 실행은 NOT_RUN |
+| 1 | [사용자 기능명세 v0.3](02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md) | 두 문서 작성·항목 AI·단일 대화·할 일·홈·문서 휴지통의 현재 기준. 14개 기능·45개 요구 |
+| 2 | [MVP 결정·변경 기록](02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md) | 앞선 A/1A·2A·3A와 후속 정합 1A·2A·3A, 기본안 구분, OPEN-MVP-01~03 종결 |
+| 3 | [요구사항–인수 추적표](02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md) | 62개 인수 사례, V 단계 종료 조건, 모든 신규 실행은 NOT_RUN |
 | 유지 상세 | [기존 v0.2](02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) · [자유형 04](02-user-feature-spec/planning-output-user-spec.md) | 대체되지 않은 CK 평가·자유 Chat·추가 기록·자유형 문서 상세 |
-| 후속 | [모듈 설계](03-module-feature-spec/README.md) | 사용자 기준선 확인 후 시스템/인터페이스/모듈 설계를 갱신. 기존 코드 관찰과 신규 구현 여부 분리 |
+| 점검 | [v0.3-R1 정합 점검](02-user-feature-spec/ax-studio-mvp-consistency-review-2026-11-23.md) | 결정 종결·모순 보정·정적 검사·G-S/G-D 잔여 설계 계약 |
+| 후속 | [모듈 설계](03-module-feature-spec/README.md) | 현재 사용자 의미를 유지하며 시스템/인터페이스/모듈 설계와 시험 계획을 갱신 |
 
 ## 2026-11-06 단계의 읽기 순서와 누적 이력
 

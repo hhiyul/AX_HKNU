@@ -1,6 +1,6 @@
 # 모듈 기능명세
 
-**2026-11-23 현재:** 문서 작성 중심 MVP의 [사용자 명세 v0.3](../02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md)과 [결정·변경 기록](../02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md)을 먼저 확인합니다. 아래 기존 모듈 계약은 재사용·차이 분석 근거이며 신규 항목 편집·단일 대화 필터·할 일·문서 휴지통의 설계 완료를 의미하지 않습니다. 사용자 기준선 검토 후 [V 단계의 요구–검증 연결](../02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md)에 따라 시스템/상세 설계를 개정합니다. 통합 코드 `a4f3af7`은 존재하며 아래의 과거 NOT_RUN은 당시 기록입니다.
+**2026-11-23 현재:** [사용자 명세 v0.3-R1](../02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md)과 [결정 기록](../02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md)의 세 제품 정합 사항은 종결했습니다. CK 두 상태·복수 작업 기록·사용자 백업 P1/운영 복구 P0를 포함한 [정합 점검 및 설계 과제](../02-user-feature-spec/ax-studio-mvp-consistency-review-2026-11-23.md)를 다음 G-S/G-D 입력으로 사용합니다. 아래 기존 모듈 계약은 재사용 근거이며 신규 항목·할 일·휴지통 설계 완료가 아닙니다. [요구–인수 추적표](../02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md)의 45개 요구·62개 사례에 설계와 시험 계획을 연결합니다. 통합 코드 기준 `a4f3af7`, 아래 과거 NOT_RUN은 당시 기록이며 신규 인수도 현재 NOT_RUN입니다.
 
 ## 과거 모듈 단계의 상태와 자료
 
