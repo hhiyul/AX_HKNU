@@ -16,7 +16,8 @@ export function tabOf(route) {
 export default function Project({ projectId, route }) {
   const page = route.parts[2] || 'home'
   const docId = page === 'docs' ? route.parts[3] : null
-  if (page === 'chat') return <Chat projectId={projectId} conversationId={route.query.c} />
+  // 프로젝트가 바뀌면 채팅 화면을 새로 만든다(이전 프로젝트의 대화로 새 프로젝트를 부르지 않게).
+  if (page === 'chat') return <Chat key={projectId} projectId={projectId} conversationId={route.query.c} />
   if (page === 'tasks') return <Tasks projectId={projectId} />
   if (page === 'plan') return <Plan projectId={projectId} />
   if (page === 'settlement') return <Settlement projectId={projectId} page={route.parts[3]} />
