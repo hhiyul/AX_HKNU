@@ -1,6 +1,6 @@
 # 모듈 기능명세
 
-**2026-11-23 현재:** [사용자 명세 v0.3-R1](../02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md)과 [결정 기록](../02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md)의 세 제품 정합 사항은 종결했습니다. CK 두 상태·복수 작업 기록·사용자 백업 P1/운영 복구 P0를 포함한 [정합 점검 및 설계 과제](../02-user-feature-spec/ax-studio-mvp-consistency-review-2026-11-23.md)를 다음 G-S/G-D 입력으로 사용합니다. 아래 기존 모듈 계약은 재사용 근거이며 신규 항목·할 일·휴지통 설계 완료가 아닙니다. [요구–인수 추적표](../02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md)의 45개 요구·62개 사례에 설계와 시험 계획을 연결합니다. 통합 코드 기준 `a4f3af7`, 아래 과거 NOT_RUN은 당시 기록이며 신규 인수도 현재 NOT_RUN입니다.
+**2026-11-25 현재:** [사용자 정본 v0.3-R2](../02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md)와 [AI Pipeline 개정 계약](ai-pipeline-contract-revision-2026-11-25.md)이 GD-046~070·최신 Figma의 현재 기준입니다. 개정 계약에서 경로별 입력·모듈 책임·상태, 기존 대체 범위와 내부 설계 D-01~07·공동 제공 J-01~05·문서 정책 DOC-POL-01을 구분합니다. 아래 기존 모듈 상세는 대체되지 않은 범위의 재사용 근거입니다. [인수 추적표](../02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md)는 55개 요구·77개 사례이며 실행은 NOT_RUN입니다. 논리 계약 작성으로 실제 제공·상세 설계·구현·인수 완료를 주장하지 않습니다.
 
 ## 과거 모듈 단계의 상태와 자료
 
@@ -18,7 +18,8 @@
 
 | 문서 | 역할 |
 | --- | --- |
-| [Grill 기능 결정표](grill-feature-decisions.md) | 기둥·가지질문별 사용자 채택 결과·유지 조건·잔여·현재 진행 위치를 먼저 기록. 정본 통합·모듈 명세 반영은 후속 |
+| [AI Pipeline 개정 계약](ai-pipeline-contract-revision-2026-11-25.md) | GD-046~070·Figma의 모듈 적용 기준. 입력/상태·대체 범위·내부 설계/공동 계약/문서 정책 잔여 |
+| [Grill 기능 결정표](grill-feature-decisions.md) | 사용자 채택 원문·이유·반례 보존. GD-046~070은 R2 정본/인수/논리 계약으로 통합됨 |
 | [GrillMe 행동 방침과 질문 트리](grillme-operating-policy.md) | 기둥질문 우선 순회 → 필요한 가지질문 → 공동·물리 계약 순서, 질문·반례 검토·결정 선기록 기준과 현재 진행 상태 |
 | [모듈 기능명세 v0.1](ai-pipeline-module-feature-spec-v0.1.md) | M-01~08 책임 개요, 13절의 M-01/06 타입·포트·상태·오류·실제 payload/파싱, 13.11~12의 발송 전 검증·CT-01~24/AD-01~10 시험 기대값, MC-01~12 진행 상태 |
 | [사용자 기능명세 v0.2](../02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) | UF-AI-01~16·D-UF-001~109·보류/공동/제외 범위의 사용자 기능 단일 정본 |

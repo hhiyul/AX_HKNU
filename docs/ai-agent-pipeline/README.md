@@ -1,16 +1,17 @@
 # AI 에이전트 파이프라인 명세
 
-AX Studio의 사용자 기능과 AI 파이프라인·모듈 설계를 관리합니다. **2026-11-23 현재: v0.3-R1에 후속 1A/2A/3A를 반영해 세 제품 정합 사항을 종결하고 설계 입력을 정리했습니다.** 통합 코드 기준은 `a4f3af7`이며 새 MVP 구현·인수 완료를 뜻하지 않습니다. 다음은 워터폴/V의 G-S 시스템 설계입니다.
+AX Studio의 사용자 기능과 AI 파이프라인·모듈 설계를 관리합니다. **2026-11-25 현재: v0.3-R2에 GD-046~070과 최신 Figma를 통합했습니다.** 복수 자유 대화·문서/항목 맥락·지정 파일·검토/AI 분리·출력·할 일·중단 후 생성의 대체 범위를 명시했습니다. 내부 설계 D-01~07·공동 계약 J-01~05·문서 완료 정책 정합 DOC-POL-01은 별도로 남습니다. 명세 개정이며 구현·실행 인수 완료가 아닙니다.
 
 ## 현재 상태와 읽기 순서
 
 | 순서 | 문서 | 현재 역할 |
 | --- | --- | --- |
-| 1 | [사용자 기능명세 v0.3](02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md) | 두 문서 작성·항목 AI·단일 대화·할 일·홈·문서 휴지통의 현재 기준. 14개 기능·45개 요구 |
-| 2 | [MVP 결정·변경 기록](02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md) | 앞선 A/1A·2A·3A와 후속 정합 1A·2A·3A, 기본안 구분, OPEN-MVP-01~03 종결 |
-| 3 | [요구사항–인수 추적표](02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md) | 62개 인수 사례, V 단계 종료 조건, 모든 신규 실행은 NOT_RUN |
+| 1 | [사용자 기능명세 v0.3-R2](02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md) | 두 프로젝트 문서·복수 대화·항목 AI·검토·출력·할 일. 14개 기능·55개 요구 |
+| 2 | [MVP 결정·변경 기록](02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md) | GD-046~070 각각의 요구/인수 연결, 대체·유지·기본안 구분 |
+| 3 | [AI Pipeline 개정 계약](03-module-feature-spec/ai-pipeline-contract-revision-2026-11-25.md) | 최신 Figma 근거, 경로별 입력·모듈 책임·상태, 대체 계약과 D/J/정책 잔여 |
+| 4 | [요구사항–인수 추적표](02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md) | 77개 인수 사례와 V 종료 조건. 모두 NOT_RUN, DOC-POL-01 분기 정합 대기 |
 | 유지 상세 | [기존 v0.2](02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) · [자유형 04](02-user-feature-spec/planning-output-user-spec.md) | 대체되지 않은 CK 평가·자유 Chat·추가 기록·자유형 문서 상세 |
-| 점검 | [v0.3-R1 정합 점검](02-user-feature-spec/ax-studio-mvp-consistency-review-2026-11-23.md) | 결정 종결·모순 보정·정적 검사·G-S/G-D 잔여 설계 계약 |
+| 과거 점검 | [v0.3-R1 정합 점검](02-user-feature-spec/ax-studio-mvp-consistency-review-2026-11-23.md) | 11월 23일의 당시 기록. 현재 잔여 판정은 R2 개정 계약 우선 |
 | 후속 | [모듈 설계](03-module-feature-spec/README.md) | 현재 사용자 의미를 유지하며 시스템/인터페이스/모듈 설계와 시험 계획을 갱신 |
 
 ## 2026-11-06 단계의 읽기 순서와 누적 이력
