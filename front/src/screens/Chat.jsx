@@ -20,6 +20,8 @@ export default function Chat({ projectId, conversationId }) {
   const [threads, setThreads] = useState(null)
   const [panelOpen, setPanelOpen] = useState(wideScreen)
   const [messages, setMessages] = useState([])
+  // 지금 보이는 메시지가 어느 대화 것인지. 다 받아 오기 전에는 기본 안내 대신 "불러오는 중"을 보여 준다.
+  const [loadedFor, setLoadedFor] = useState(undefined)
   const [files, setFiles] = useState({})
   const [pending, setPending] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -37,17 +39,23 @@ export default function Chat({ projectId, conversationId }) {
   // 주소에 대화가 없으면 가장 최근 대화를 연다.
   const currentId = conversationId || threads?.[0]?.id || null
   const current = threads?.find((t) => t.id === currentId)
+  // 늦게 도착한 다른 대화의 응답이 지금 화면을 덮지 않게 마지막으로 연 대화를 기억한다.
+  const shownId = useRef(currentId)
+  shownId.current = currentId
+  const ready = threads !== null && loadedFor === currentId
   const loadThreads = useCallback(() => conversations.list(projectId)
     .then((list) => { setThreads(list); return list })
     .catch((err) => { setError(errorText(err)); return null }), [projectId])
   const fetchMessages = useCallback((cid) => (cid ? chat.messages(projectId, cid) : Promise.resolve([])), [projectId])
-  const showMessages = (list) => {
+  const showMessages = (list, cid) => {
+    if (cid !== shownId.current) return
     setMessages(list)
+    setLoadedFor(cid)
     // 보낸 질문이 목록에 들어왔으면 임시로 보여 주던 것을 지운다.
     setSentDraft((draft) => (draft && list.some((m) => m.role === 'USER' && m.content === draft.content) ? null : draft))
   }
-  const load = useCallback(() => fetchMessages(currentId).then(showMessages).catch((err) => setError(errorText(err))),
-    [fetchMessages, currentId])
+  const load = useCallback(() => fetchMessages(currentId).then((list) => showMessages(list, currentId))
+    .catch((err) => setError(errorText(err))), [fetchMessages, currentId]) // eslint-disable-line react-hooks/exhaustive-deps
   const select = (id) => { setError(''); setStreaming(''); go(paths.chat(projectId), id ? { c: id } : undefined); if (!wideScreen()) setPanelOpen(false) }
   const startNew = async () => {
     if (running) return
@@ -105,7 +113,7 @@ export default function Chat({ projectId, conversationId }) {
         onDone: async (kind, content) => {
           // 저장된 답변을 먼저 받아 오고, 받은 목록과 흘러나오던 글을 한 번에 바꾼다(사라지거나 두 번 보이지 않게).
           const list = await fetchMessages(cid).catch(() => null)
-          if (list) showMessages(list)
+          if (list) showMessages(list, cid)
           if (kind !== 'completed') setError(content || '답변을 받지 못했어요.')
           setStreaming(''); setRunning(false); setSentDraft(null)
           loadThreads()
@@ -128,20 +136,21 @@ export default function Chat({ projectId, conversationId }) {
     <div className={`chat-layout${panelOpen ? ' conversation-panel-open' : ''}`}>
       <section className="chat">
         <div className="chat-local-toolbar">
-          <span className="chat-conversation-label">{current?.title || (currentId ? '새 대화' : '첫 질문을 보내면 대화가 시작돼요')}</span>
+          <span className="chat-conversation-label">{threads === null ? '' : current?.title || (currentId ? '새 대화' : '첫 질문을 보내면 대화가 시작돼요')}</span>
           <div className="chat-mobile-actions">
             <button type="button" disabled={running} onClick={startNew}>＋ 새 대화</button>
             <button type="button" className="chat-history-toggle" aria-expanded={panelOpen} onClick={() => setPanelOpen(!panelOpen)}>대화 목록 ☷</button>
           </div>
         </div>
         <div className="messages">
-          {!messages.length && !streaming && !sentDraft && !running && (
+          {!ready && !sentDraft && !running && <p className="muted small" role="status">대화를 불러오는 중…</p>}
+          {ready && !messages.length && !streaming && !sentDraft && !running && (
             <article className="msg assistant">
               <div className="name">AX STUDIO</div>
               <p>기본 기획과 지금까지 쓴 문서를 바탕으로 답해요. 어떤 점이 궁금한가요?</p>
             </article>
           )}
-          {messages.map((m) => (m.role === 'USER' ? (
+          {(ready ? messages : []).map((m) => (m.role === 'USER' ? (
             <div key={m.id} className="msg user"><FileChips items={attached(m)} /><p>{m.content}</p></div>
           ) : (
             <article key={m.id} className="msg assistant">
