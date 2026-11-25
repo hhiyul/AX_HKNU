@@ -32,7 +32,7 @@ from app.ai.runtime import Runtime
 from app.ai.usage import UsageTracker, valid_usage
 from app.config import get_settings
 from app.errors import AppError
-from app.services import ai_context, ai_runs, ai_tools, chat, conversations, doc_sources, items
+from app.services import ai_context, ai_images, ai_runs, ai_tools, chat, conversations, doc_sources, items
 from app.services.ai_runs import RunCheck
 
 logger = logging.getLogger(__name__)
@@ -283,6 +283,8 @@ class _RunJob:
         self.reference = reference
         self.sources: list[dict] = []
         self.asset_ids = list(asset_ids or [])
+        # 이번 질문에 붙인 사진을 AI 이미지 입력으로 바꾼 것(설정이 켜져 있을 때)
+        self.images: list[dict] = []
         # 이번 실행에서 AI에게 넘긴 참고 파일. 답변에 함께 남긴다.
         self.source_ids: list[ObjectId] = []
         self.user_id, self.project_id, self.run_id = user_id, project_id, run_id
@@ -366,17 +368,22 @@ class _RunJob:
         prepared = await prepare(
             self.provider, prefix, history, self.text, self.toolbox.tools,
             self.emit, self.runtime.model, self.budget, save_summary, self.document_mode, tail, self._observe_count,
+            self.images,
         )
         return prepared, _apply_prepared_history(history, prepared)
 
     async def _generate(self) -> None:
         project = await self.db.projects.find_one({"_id": self.project_id})
         sections = await ai_context.build_sections(self.db, project, self.user_id)
-        files = {}
+        files, seen = {}, []
+        if get_settings().ai_read_images and self.asset_ids:
+            self.images, seen = await ai_images.image_inputs(self.db, self.user_id, self.asset_ids)
         if get_settings().ai_read_attachments:
             files = await ai_context.file_sections(self.db, project, self.user_id, self.asset_ids)
-        elif self.asset_ids:
-            sections["attachments_not_read"] = await _unread_note(self.db, self.asset_ids)
+        # 보지도 읽지도 않은 첨부(글 파일 읽기가 꺼져 있을 때의 문서, 장수를 넘긴 사진)는 이름만 알린다.
+        unread = [ident for ident in self.asset_ids if ident not in seen]
+        if unread and not get_settings().ai_read_attachments:
+            sections["attachments_not_read"] = await _unread_note(self.db, unread)
         sections.update(files)
         if self.reference:
             sections["reference_document"] = self.reference

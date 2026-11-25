@@ -33,6 +33,7 @@ services:
       OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
       OPENAI_REASONING_EFFORT: "${OPENAI_REASONING_EFFORT:-}"
       AI_READ_ATTACHMENTS: "${AI_READ_ATTACHMENTS:-false}"
+      AI_READ_IMAGES: "${AI_READ_IMAGES:-true}"
       UPLOAD_DIR: /data/uploads
     volumes:
       - backend_uploads:/data/uploads

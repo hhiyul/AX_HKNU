@@ -1,0 +1,56 @@
+# main에 푸시하면 EC2 안의 self-hosted 러너가 서버의 ~/AX_HKNU를 최신으로 맞추고 컨테이너를 다시 띄운다.
+# - 러너는 EC2에서 ec2-user로 서비스 등록(svc.sh)해 둔 것을 쓴다. 바깥에서 서버로 여는 포트는 없다.
+# - 서버의 .env(비밀 값)는 git에 없으므로 그대로 남는다.
+# - 새 컬렉션이 생기는 변경이면 init_db.py는 사람이 직접 한 번 돌린다(Atlas를 자동으로 건드리지 않는다).
+# - 저장소가 공개로 바뀌면 self-hosted 러너는 위험하다. 비공개 저장소에서만 쓴다. pull_request로는 돌지 않는다.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  # Actions 화면에서 손으로 다시 배포할 때
+  workflow_dispatch:
+
+# 배포가 겹치지 않게 하나씩 차례로 돈다.
+concurrency:
+  group: deploy-ec2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Update code
+        run: |
+          set -euo pipefail
+          cd ~/AX_HKNU
+          git fetch origin main
+          git switch main
+          # 서버에서 따로 고친 커밋이 있으면 덮어쓰지 않고 멈춘다.
+          git merge --ff-only origin/main
+          git log -1 --oneline
+
+      - name: Rebuild and restart
+        run: |
+          set -euo pipefail
+          cd ~/AX_HKNU
+          docker compose up -d --build
+          # 디스크가 차지 않게 이름 없는 옛 이미지를 지운다.
+          docker image prune -f
+
+      - name: Health check
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/auth/me || true)
+            # 로그인 안 한 상태라 401이 정상 응답이다(백엔드·nginx 둘 다 살아 있음).
+            if [ "$code" = "401" ]; then
+              echo "OK: 화면과 API가 응답합니다."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "배포 뒤 150초 안에 응답이 없습니다."
+          cd ~/AX_HKNU && docker compose ps && docker compose logs --tail=60 backend
+          exit 1

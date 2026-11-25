@@ -66,8 +66,19 @@ async def test_download_returns_same_bytes_and_safe_headers(client, login):
     assert res.status_code == 200
     assert res.content == PNG
     assert res.headers["content-type"] == "image/png"
-    assert res.headers["content-disposition"].startswith("attachment")
+    # 사진은 브라우저에서 바로 보인다(채팅·참고 자료 미리보기).
+    assert res.headers["content-disposition"].startswith("inline")
     assert res.headers["x-content-type-options"] == "nosniff"
+
+
+async def test_documents_are_downloaded_not_shown(client, login):
+    await login(client)
+    project = (await client.post("/projects", json={"name": "팔찌"})).json()
+    res = await client.post("/assets", data={"project_id": project["id"], "asset_type": "document"},
+                            files={"file": ("견적.txt", "은 체인 2,800원".encode(), "text/plain")})
+    download = await client.get(res.json()["file_url"])
+    assert download.headers["content-disposition"].startswith("attachment")
+    assert download.headers["x-content-type-options"] == "nosniff"
 
 
 async def test_size_limit(client, login):

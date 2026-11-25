@@ -49,6 +49,8 @@ markdown==3.11.3
     # via -r requirements.in
 opentelemetry-api==1.45.2
     # via fastapi
+pillow==12.3.0
+    # via -r requirements.in
 pycparser==3.12
     # via cffi
 pydantic==2.14.2

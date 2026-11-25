@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     openai_reasoning_effort: Literal["", "none", "low", "medium", "high"] = ""
     # 기획서 v2: 첨부 원본은 AI가 자동으로 읽지 않는다. true면 참고 파일의 TXT·MD·DOCX를 읽어 넘긴다.
     ai_read_attachments: bool = False
+    # 채팅에 붙인 사진(PNG·JPEG·WebP)을 AI가 보게 한다. 글 파일 읽기(위)와 따로 켜고 끈다.
+    ai_read_images: bool = True
 
 
 @lru_cache
