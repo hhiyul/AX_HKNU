@@ -31,19 +31,27 @@ const FileIcon = () => (
   </svg>
 )
 
-// 메시지에 붙은 파일 목록. onRemove가 있으면 보내기 전 첨부(지울 수 있음)다.
+// 메시지에 붙은 파일 목록. 사진은 작은 미리보기, 그 밖의 파일은 이름 칩으로 보인다.
+// onRemove가 있으면 보내기 전 첨부(지울 수 있음)다. 누르면 새 탭에서 원본을 연다.
 export function FileChips({ items, onRemove }) {
   if (!items.length) return null
   return (
     <div className={`chat-attachments${onRemove ? ' chat-draft-attachments' : ''}`}>
-      {items.map((item) => (
+      {items.map((item) => (isImage(item) ? (
+        <div key={item.id} className="chat-photo">
+          <a href={fileHref(item.id)} target="_blank" rel="noopener noreferrer" title={item.file_name}>
+            <img src={fileHref(item.id)} alt={item.file_name} loading="lazy" />
+          </a>
+          {onRemove && <button type="button" aria-label={`${item.file_name} 첨부 취소`} onClick={() => onRemove(item.id)}>×</button>}
+        </div>
+      ) : (
         <div key={item.id} className="chat-file-chip">
           <a href={fileHref(item.id)} target="_blank" rel="noopener noreferrer" title={item.file_name} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', color: 'inherit', textDecoration: 'none' }}>
             <FileIcon /><span>{item.file_name}</span>
           </a>
           {onRemove && <button type="button" aria-label={`${item.file_name} 첨부 취소`} onClick={() => onRemove(item.id)}>×</button>}
         </div>
-      ))}
+      )))}
     </div>
   )
 }

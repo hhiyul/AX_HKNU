@@ -12,6 +12,7 @@ from app.services.store import get_owned_asset
 from app.storage import file_path
 
 router = APIRouter(prefix="/assets", tags=["assets"])
+INLINE_TYPES = {"image/png", "image/jpeg", "image/webp"}
 
 # 여기는 올린 파일만 다룬다. 기획 산출물(문서)은 /projects/{id}/items/document 에 있다.
 
@@ -50,10 +51,13 @@ async def download_asset(asset_id: str, user: dict = Depends(current_user), db: 
     path = file_path(asset["_id"])
     if not path.is_file():
         raise AppError(404, "FILE_MISSING", "저장된 파일을 찾을 수 없습니다.")
+    # 사진(내용으로 PNG·JPEG·WebP임을 확인한 것)은 브라우저에서 바로 보이게, 문서는 내려받게 한다.
+    inline = asset["mime_type"] in INLINE_TYPES
     return FileResponse(
         path,
         media_type=asset["mime_type"],
         filename=asset["file_name"],
+        content_disposition_type="inline" if inline else "attachment",
         headers={"X-Content-Type-Options": "nosniff"},
     )
 

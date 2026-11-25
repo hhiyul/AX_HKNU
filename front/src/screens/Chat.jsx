@@ -25,6 +25,8 @@ export default function Chat({ projectId, conversationId }) {
   const [uploading, setUploading] = useState(false)
   const [text, setText] = useState('')
   const [streaming, setStreaming] = useState('')
+  // 보낸 질문을 서버 목록에 들어오기 전까지 바로 보여 준다(화면이 비었다가 다시 채워지지 않게).
+  const [sentDraft, setSentDraft] = useState(null)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
   const bottom = useRef(null)
@@ -35,11 +37,17 @@ export default function Chat({ projectId, conversationId }) {
   // 주소에 대화가 없으면 가장 최근 대화를 연다.
   const currentId = conversationId || threads?.[0]?.id || null
   const current = threads?.find((t) => t.id === currentId)
-  const loadThreads = useCallback(() => conversations.list(projectId).then(setThreads).catch((err) => setError(errorText(err))), [projectId])
-  const load = useCallback(() => {
-    if (!currentId) { setMessages([]); return Promise.resolve() }
-    return chat.messages(projectId, currentId).then(setMessages).catch((err) => setError(errorText(err)))
-  }, [projectId, currentId])
+  const loadThreads = useCallback(() => conversations.list(projectId)
+    .then((list) => { setThreads(list); return list })
+    .catch((err) => { setError(errorText(err)); return null }), [projectId])
+  const fetchMessages = useCallback((cid) => (cid ? chat.messages(projectId, cid) : Promise.resolve([])), [projectId])
+  const showMessages = (list) => {
+    setMessages(list)
+    // 보낸 질문이 목록에 들어왔으면 임시로 보여 주던 것을 지운다.
+    setSentDraft((draft) => (draft && list.some((m) => m.role === 'USER' && m.content === draft.content) ? null : draft))
+  }
+  const load = useCallback(() => fetchMessages(currentId).then(showMessages).catch((err) => setError(errorText(err))),
+    [fetchMessages, currentId])
   const select = (id) => { setError(''); setStreaming(''); go(paths.chat(projectId), id ? { c: id } : undefined); if (!wideScreen()) setPanelOpen(false) }
   const startNew = async () => {
     if (running) return
@@ -76,26 +84,37 @@ export default function Chat({ projectId, conversationId }) {
   const send = async (event) => {
     event?.preventDefault()
     if (!text.trim() || running || uploading) return
+    const question = text.trim()
+    const attachedNow = pending
     setError(''); setRunning(true); setStreaming('')
+    setSentDraft({ content: question, files: attachedNow })
+    setText(''); setPending([])
     try {
-      const { run_id: runId } = await chat.send(projectId, text.trim(), 'chat', pending.map((a) => a.id), currentId)
-      setText(''); setPending([])
-      // 대화가 없던 첫 질문이면 서버가 만든 대화를 목록에서 받아 연다.
-      if (!currentId) await loadThreads()
-      else load()
+      const { run_id: runId } = await chat.send(projectId, question, 'chat', attachedNow.map((a) => a.id), currentId)
+      // 이 실행이 속한 대화. 대화가 없던 첫 질문이면 서버가 만든 대화(가장 최근)를 받아 주소에 고정한다.
+      let cid = currentId
+      if (!cid) {
+        cid = (await loadThreads())?.[0]?.id || null
+        if (cid) go(paths.chat(projectId), { c: cid })
+      }
       followRun(projectId, runId, {
         onEvent: (e) => {
           if (e.kind === 'delta') setStreaming((now) => now + e.content)
           if (e.kind === 'document_route') setStreaming('')
         },
-        onDone: (kind, content) => {
-          setRunning(false); setStreaming('')
+        onDone: async (kind, content) => {
+          // 저장된 답변을 먼저 받아 오고, 받은 목록과 흘러나오던 글을 한 번에 바꾼다(사라지거나 두 번 보이지 않게).
+          const list = await fetchMessages(cid).catch(() => null)
+          if (list) showMessages(list)
           if (kind !== 'completed') setError(content || '답변을 받지 못했어요.')
-          load(); loadThreads()
+          setStreaming(''); setRunning(false); setSentDraft(null)
+          loadThreads()
         },
       })
     } catch (err) {
-      setRunning(false)
+      // 보내지 못했으면 쓰던 글과 첨부를 입력칸에 되돌린다.
+      setRunning(false); setSentDraft(null)
+      setText(question); setPending(attachedNow)
       setError(err.code === 'RUN_ACTIVE' ? 'AI가 다른 요청을 처리 중이에요.' : errorText(err))
     }
   }
@@ -116,7 +135,7 @@ export default function Chat({ projectId, conversationId }) {
           </div>
         </div>
         <div className="messages">
-          {!messages.length && !streaming && (
+          {!messages.length && !streaming && !sentDraft && !running && (
             <article className="msg assistant">
               <div className="name">AX STUDIO</div>
               <p>기본 기획과 지금까지 쓴 문서를 바탕으로 답해요. 어떤 점이 궁금한가요?</p>
@@ -130,10 +149,11 @@ export default function Chat({ projectId, conversationId }) {
               <Markdown>{m.content}</Markdown>
             </article>
           )))}
-          {streaming && (
+          {sentDraft && <div className="msg user"><FileChips items={sentDraft.files} /><p>{sentDraft.content}</p></div>}
+          {(streaming || running) && !(!sentDraft && messages[messages.length - 1]?.role === 'ASSISTANT') && (
             <article className="msg assistant">
               <div className="name">AX STUDIO <span className="muted">· 답변 중</span></div>
-              <Markdown>{streaming}</Markdown>
+              {streaming ? <Markdown>{streaming}</Markdown> : <p className="muted">생각하고 있어요…</p>}
             </article>
           )}
           {error && <div className="notice error" style={{ whiteSpace: 'pre-line' }}>{error}</div>}

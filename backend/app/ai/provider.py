@@ -116,7 +116,9 @@ class OpenAIProvider:
     async def count(self, wire: dict) -> int:
         if not self.official:
             # 게이트웨이에는 토큰 세기 주소가 없다. 한글 기준 넉넉하게 2글자를 1토큰으로 어림잡는다.
-            return max(1, len(json.dumps(wire, ensure_ascii=False)) // 2)
+            # 사진은 데이터 길이가 아니라 장당 정해 둔 토큰으로 센다(사진 하나가 압축을 일으키지 않게).
+            text, images = without_images(wire)
+            return max(1, len(json.dumps(text, ensure_ascii=False)) // 2) + images * IMAGE_TOKENS
         extras = {key: value for key, value in self._extras().items() if key in ("reasoning", "truncation")}
         data = await self._post(self.responses_url + "/input_tokens", {**wire, **extras})
         n = data.get("input_tokens")
@@ -225,6 +227,28 @@ class OpenAIProvider:
         return SearchResult({"text": "".join(texts), "urls": list(dict.fromkeys(urls))}, data.get("usage"))
 
 
+# 사진 한 장을 어림잡을 토큰 수(큰 사진의 실제 값보다 넉넉하게).
+IMAGE_TOKENS = 1500
+
+
+def without_images(wire: dict) -> tuple[dict, int]:
+    """(사진 데이터를 뺀 요청, 사진 장수). 글자 수로 토큰을 어림잡을 때 쓴다."""
+    images = 0
+    items = []
+    for item in wire.get("input", []):
+        content = item.get("content") if isinstance(item, dict) else None
+        if isinstance(content, list):
+            parts = []
+            for part in content:
+                if isinstance(part, dict) and part.get("type") == "input_image":
+                    images += 1
+                    continue
+                parts.append(part)
+            item = {**item, "content": parts}
+        items.append(item)
+    return {**wire, "input": items}, images
+
+
 # 모델 쪽 안전 정책이 막은 요청(예: cyber_policy). 연결 문제와 구분해 사용자에게 알린다.
 POLICY_CODES = ("policy", "content_filter", "safety", "moderation", "flagged")
 
@@ -243,7 +267,8 @@ def _stream_failure_code(event: dict) -> str:
 class DemoProvider:
     """Deterministic local provider for synthetic-only interactive testing."""
     async def count(self, wire):
-        return max(1, len(json.dumps(wire, ensure_ascii=False)) // 3)
+        text, images = without_images(wire)
+        return max(1, len(json.dumps(text, ensure_ascii=False)) // 3) + images * IMAGE_TOKENS
 
     async def summarize(self, messages):
         return " / ".join(m["content"][:100] for m in messages)[:1000]

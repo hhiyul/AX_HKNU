@@ -10,3 +10,5 @@ pyjwt>=2.10,<3
 email-validator>=2.2,<3
 # 산출물 TXT 내보내기(Markdown → 글)
 markdown>=3.7,<4
+# 채팅 사진을 AI에 보내기 전에 줄이기
+pillow>=12,<13
