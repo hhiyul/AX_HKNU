@@ -80,3 +80,19 @@
   .doc-new { grid-template-columns: 1fr; }
   .editor-actions button { flex: 1; }
 }
+
+/* 다크모드: 색이 프로토타입 곳곳에 직접 박혀 있어서, 변수 대신 화면 전체를 반전하고 사진만 되돌린다.
+   filter를 html(문서 루트)에 걸어야 position:fixed 요소의 기준이 바뀌지 않는다. */
+html { background: #fff; }
+html[data-theme='dark'] { filter: invert(0.9) hue-rotate(180deg); color-scheme: light; }
+html[data-theme='dark'] :is(img, video, picture, canvas, iframe) { filter: invert(1) hue-rotate(180deg); }
+
+.theme-toggle {
+  position: fixed; top: 12px; right: 14px; z-index: 1000;
+  width: 34px; height: 34px; padding: 0; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--ink);
+  font-size: 16px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px #22304a14;
+}
+.theme-toggle:hover { background: var(--pale); }
+/* 고정된 테마 버튼과 겹치지 않게 프로젝트 상단 오른쪽 버튼을 한 칸 비켜 둔다. */
+.workspace-header-actions { margin-right: 44px; }

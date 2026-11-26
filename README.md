@@ -10,7 +10,7 @@
 ## 한눈에 보기
 
 ```
-[배포]  main에 push
+[배포]  main에 push            
           │
           ▼
         GitHub Actions (deploy.yml)
