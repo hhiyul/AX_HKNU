@@ -2,6 +2,8 @@
 
 AX Studio의 사용자 기능과 AI 파이프라인·모듈 설계를 관리합니다. **2026-11-25 현재: v0.3-R2에 GD-046~070과 최신 Figma를 통합했습니다.** 복수 자유 대화·문서/항목 맥락·지정 파일·검토/AI 분리·출력·할 일·중단 후 생성의 대체 범위를 명시했습니다. 내부 설계 D-01~07·공동 계약 J-01~05·문서 완료 정책 정합 DOC-POL-01은 별도로 남습니다. 명세 개정이며 구현·실행 인수 완료가 아닙니다.
 
+**2026-11-26 후속:** [에이전트 기능 보완 명세](03-module-feature-spec/agent-capability-contracts-2026-11-26.md)에 최신 Figma·현재 앱 조사와 구현 전 계약을 추가했습니다. 일정 읽기는 일부 존재하며, 추가 자료 검색·일정 조건 조회·일반 채팅의 할 일 등록 연결 등을 CAP-01~12로 구분했습니다. 첫 출시 범위·기존 Grill 결정은 유지하고, 구현 코드는 변경하지 않았습니다.
+
 ## 현재 상태와 읽기 순서
 
 | 순서 | 문서 | 현재 역할 |
@@ -9,6 +11,7 @@ AX Studio의 사용자 기능과 AI 파이프라인·모듈 설계를 관리합�
 | 1 | [사용자 기능명세 v0.3-R2](02-user-feature-spec/ax-studio-user-feature-spec-v0.3.md) | 두 프로젝트 문서·복수 대화·항목 AI·검토·출력·할 일. 14개 기능·55개 요구 |
 | 2 | [MVP 결정·변경 기록](02-user-feature-spec/ax-studio-mvp-decisions-v0.3.md) | GD-046~070 각각의 요구/인수 연결, 대체·유지·기본안 구분 |
 | 3 | [AI Pipeline 개정 계약](03-module-feature-spec/ai-pipeline-contract-revision-2026-11-25.md) | 최신 Figma 근거, 경로별 입력·모듈 책임·상태, 대체 계약과 D/J/정책 잔여 |
+| 3-보완 | [에이전트 기능 보완 명세](03-module-feature-spec/agent-capability-contracts-2026-11-26.md) | 현재 소스의 기능별 차이, 검색/일정/확인 등록·문서/파일/실행 논리 계약, 공동 제공물과 ACAP-01~18 시험 계획 |
 | 4 | [요구사항–인수 추적표](02-user-feature-spec/ax-studio-mvp-acceptance-v0.3.md) | 77개 인수 사례와 V 종료 조건. 모두 NOT_RUN, DOC-POL-01 분기 정합 대기 |
 | 유지 상세 | [기존 v0.2](02-user-feature-spec/ai-pipeline-user-feature-spec-v0.2.md) · [자유형 04](02-user-feature-spec/planning-output-user-spec.md) | 대체되지 않은 CK 평가·자유 Chat·추가 기록·자유형 문서 상세 |
 | 과거 점검 | [v0.3-R1 정합 점검](02-user-feature-spec/ax-studio-mvp-consistency-review-2026-11-23.md) | 11월 23일의 당시 기록. 현재 잔여 판정은 R2 개정 계약 우선 |
