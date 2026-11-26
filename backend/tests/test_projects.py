@@ -212,3 +212,14 @@ async def test_permanent_delete_reaps_dead_run(client, login, db):
     await db.ai_runs.insert_one(run)
     assert (await client.delete(url)).status_code == 204
     assert (await client.delete(url, params={"permanent": "true"})).status_code == 204
+
+
+async def test_project_shows_active_run_so_screen_can_resume_it(client, login, db):
+    await login(client)
+    project = await create_project(client)
+    assert project["active_run"] is None
+    run_id = ObjectId()
+    await db.projects.update_one({"_id": ObjectId(project["id"])}, {"$set": {"active_run": run_id}})
+    res = await client.get(f"/projects/{project['id']}")
+    assert res.status_code == 200, res.text
+    assert res.json()["active_run"] == str(run_id)
