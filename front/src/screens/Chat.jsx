@@ -1,7 +1,7 @@
 // AI협업(프로토타입 채팅 틀). 대화를 여러 개 두고(?c=대화 id), 답변은 SSE로 받아 보여 준 뒤 목록을 다시 읽는다.
 // 사진·파일은 먼저 프로젝트 자료로 올리고 메시지에 asset_ids로 붙인다. TXT·MD·DOCX는 서버 설정이 켜져 있을 때 AI가 읽는다.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { assets, chat, conversations, errorText } from '../api/index.js'
+import { assets, chat, conversations, errorText, runs } from '../api/index.js'
 import { followRun } from '../api/stream.js'
 import { FILE_ACCEPT, FileChips, PHOTO_ACCEPT, uploadFiles } from '../components/Attachments.jsx'
 import ConversationPanel from '../components/ConversationPanel.jsx'
@@ -30,7 +30,14 @@ export default function Chat({ projectId, conversationId }) {
   // 보낸 질문을 서버 목록에 들어오기 전까지 바로 보여 준다(화면이 비었다가 다시 채워지지 않게).
   const [sentDraft, setSentDraft] = useState(null)
   const [running, setRunning] = useState(false)
+  // 지금 따라가는 실행 id(중지 버튼용)와 중지 요청을 보냈는지.
+  const [runId, setRunId] = useState(null)
+  const [stopping, setStopping] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
+  // 화면을 떠나면 열어 둔 스트림을 닫는다.
+  const closeStream = useRef(null)
+  useEffect(() => () => closeStream.current?.(), [])
   const bottom = useRef(null)
   const photoInput = useRef(null)
   const fileInput = useRef(null)
@@ -56,7 +63,7 @@ export default function Chat({ projectId, conversationId }) {
   }
   const load = useCallback(() => fetchMessages(currentId).then((list) => showMessages(list, currentId))
     .catch((err) => setError(errorText(err))), [fetchMessages, currentId]) // eslint-disable-line react-hooks/exhaustive-deps
-  const select = (id) => { setError(''); setStreaming(''); go(paths.chat(projectId), id ? { c: id } : undefined); if (!wideScreen()) setPanelOpen(false) }
+  const select = (id) => { setError(''); setInfo(''); setStreaming(''); go(paths.chat(projectId), id ? { c: id } : undefined); if (!wideScreen()) setPanelOpen(false) }
   const startNew = async () => {
     if (running) return
     try {
@@ -94,18 +101,19 @@ export default function Chat({ projectId, conversationId }) {
     if (!text.trim() || running || uploading) return
     const question = text.trim()
     const attachedNow = pending
-    setError(''); setRunning(true); setStreaming('')
+    setError(''); setInfo(''); setRunning(true); setStreaming('')
     setSentDraft({ content: question, files: attachedNow })
     setText(''); setPending([])
     try {
       const { run_id: runId } = await chat.send(projectId, question, 'chat', attachedNow.map((a) => a.id), currentId)
+      setRunId(runId)
       // 이 실행이 속한 대화. 대화가 없던 첫 질문이면 서버가 만든 대화(가장 최근)를 받아 주소에 고정한다.
       let cid = currentId
       if (!cid) {
         cid = (await loadThreads())?.[0]?.id || null
         if (cid) go(paths.chat(projectId), { c: cid })
       }
-      followRun(projectId, runId, {
+      closeStream.current = followRun(projectId, runId, {
         onEvent: (e) => {
           if (e.kind === 'delta') setStreaming((now) => now + e.content)
           if (e.kind === 'document_route') setStreaming('')
@@ -114,8 +122,10 @@ export default function Chat({ projectId, conversationId }) {
           // 저장된 답변을 먼저 받아 오고, 받은 목록과 흘러나오던 글을 한 번에 바꾼다(사라지거나 두 번 보이지 않게).
           const list = await fetchMessages(cid).catch(() => null)
           if (list) showMessages(list, cid)
-          if (kind !== 'completed') setError(content || '답변을 받지 못했어요.')
-          setStreaming(''); setRunning(false); setSentDraft(null)
+          if (kind === 'stopped') setInfo('답변을 멈췄어요. 이어서 다른 질문을 보내도 돼요.')
+          else if (kind !== 'completed') setError(content || '답변을 받지 못했어요.')
+          setStreaming(''); setRunning(false); setSentDraft(null); setRunId(null); setStopping(false)
+          closeStream.current = null
           loadThreads()
         },
       })
@@ -124,6 +134,17 @@ export default function Chat({ projectId, conversationId }) {
       setRunning(false); setSentDraft(null)
       setText(question); setPending(attachedNow)
       setError(err.code === 'RUN_ACTIVE' ? 'AI가 다른 요청을 처리 중이에요.' : errorText(err))
+    }
+  }
+  // 중지는 요청만 보낸다. 실제 마무리(목록 다시 읽기 등)는 스트림의 stopped 사건에서 한다.
+  const stop = async () => {
+    if (!runId || stopping) return
+    setStopping(true)
+    try {
+      await runs.stop(projectId, runId)
+    } catch (err) {
+      setStopping(false)
+      setError(errorText(err))
     }
   }
   // 폰 키보드의 줄바꿈과 겹치지 않게, PC에서만 Enter로 보낸다(Shift+Enter는 줄바꿈).
@@ -165,6 +186,7 @@ export default function Chat({ projectId, conversationId }) {
               {streaming ? <Markdown>{streaming}</Markdown> : <p className="muted">생각하고 있어요…</p>}
             </article>
           )}
+          {info && <div className="notice" role="status">{info}</div>}
           {error && <div className="notice error" style={{ whiteSpace: 'pre-line' }}>{error}</div>}
           <div ref={bottom} />
         </div>
@@ -183,7 +205,14 @@ export default function Chat({ projectId, conversationId }) {
           <label htmlFor="message" className="sr-only">메시지</label>
           <textarea id="message" rows={1} placeholder={uploading ? '파일을 올리는 중…' : '어떤 점이 궁금한가요?'} value={text} onKeyDown={onKey}
             onChange={(e) => setText(e.target.value)} />
-          <button className="send" type="submit" aria-label="메시지 전송" disabled={running || uploading || !text.trim()}>{icon('M12 19V5m-6 6 6-6 6 6')}</button>
+          {running ? (
+            <button className="send" type="button" aria-label={stopping ? '멈추는 중' : '답변 멈추기'} title="답변 멈추기"
+              disabled={!runId || stopping} onClick={stop}>
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect width="12" height="12" rx="2" fill="currentColor" /></svg>
+            </button>
+          ) : (
+            <button className="send" type="submit" aria-label="메시지 전송" disabled={uploading || !text.trim()}>{icon('M12 19V5m-6 6 6-6 6 6')}</button>
+          )}
         </form>
       </section>
       <button type="button" className="conversation-backdrop" aria-label="대화 목록 닫기" onClick={() => setPanelOpen(false)} />
