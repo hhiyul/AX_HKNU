@@ -73,6 +73,21 @@ async def test_run_without_conversation_uses_latest_or_creates_one(ctx, use_runt
     assert len(listed) == 1 and listed[0]["message_count"] == 4
 
 
+@pytest.mark.parametrize("delivery, expected", [("not_dispatched", "failed"), ("unknown", "unknown")])
+async def test_reload_keeps_failed_run_without_dispatching_again(ctx, use_runtime, delivery, expected):
+    from app.ai.responses import Delivery, ProviderError
+    provider = FakeProvider([], error=ProviderError("CONNECTION_FAILED" if delivery == "not_dispatched" else "TRANSPORT_ERROR", Delivery(delivery)))
+    runtime = use_runtime(provider)
+    await send(ctx, runtime, "재접속 후 결과 확인")
+    conversation = (await ctx["client"].get(f"{ctx['url']}/conversations")).json()[0]
+    for _ in range(2):
+        messages = (await ctx["client"].get(f"{ctx['url']}/messages", params={"conversation_id": conversation["id"]})).json()
+        assert len(messages) == 1
+        assert messages[0]["run_outcome"]["status"] == expected
+        assert messages[0]["run_outcome"]["delivery"] == delivery
+    assert len(provider.calls) == 1
+
+
 async def test_legacy_messages_move_into_one_conversation(ctx, db):
     client, url = ctx["client"], ctx["url"]
     project_id = ObjectId(ctx["project_id"])

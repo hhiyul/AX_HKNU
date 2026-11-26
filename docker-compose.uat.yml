@@ -1,0 +1,52 @@
+# Local browser acceptance environment. Never connects to the team database.
+# Build front first: npm --prefix front run build
+# Run: docker compose -p ax-agent-uat -f docker-compose.uat.yml up -d --build
+services:
+  react-front:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./front/dist:/usr/share/nginx/html:ro
+      - ./front/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:15173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+  backend:
+    build: ./backend
+    ports:
+      - "127.0.0.1:18091:8000"
+    environment:
+      MONGO_DETAILS: mongodb://uat-mongo:27017/ax_agent_uat
+      JWT_SECRET: local-browser-uat-only-not-for-deployment-2026
+      COOKIE_SECURE: "false"
+      AI_PROVIDER: openai
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-6-luna}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+      OPENAI_REASONING_EFFORT: "${OPENAI_REASONING_EFFORT:-}"
+      AI_READ_ATTACHMENTS: "true"
+      AI_READ_IMAGES: "true"
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uat_uploads:/data/uploads
+    depends_on:
+      uat-mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  uat-mongo:
+    image: mongo:8
+    volumes:
+      - uat_mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  uat_mongo:
+  uat_uploads:

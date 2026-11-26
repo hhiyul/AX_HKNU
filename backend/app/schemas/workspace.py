@@ -145,6 +145,8 @@ class MessageOut(BaseModel):
     target_doc_id: str | None = None
     target_section_id: str | None = None
     request_id: str | None = None
+    # Restored terminal status, including runs with no assistant message.
+    run_outcome: dict[str, Any] | None = None
     # 항목별 AI 후보 {doc_id, section_id, base_revision, base_draft_revision, text, references}
     candidate: dict[str, Any] | None = None
     # 할 일 후보 [{proposal_id, title, suggested_date, note, task_id, task_status}]. 등록했으면 task_id가 있다

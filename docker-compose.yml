@@ -32,7 +32,7 @@ services:
       OPENAI_MODEL: "${OPENAI_MODEL:-gpt-6-luna}"
       OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
       OPENAI_REASONING_EFFORT: "${OPENAI_REASONING_EFFORT:-}"
-      AI_READ_ATTACHMENTS: "${AI_READ_ATTACHMENTS:-false}"
+      AI_READ_ATTACHMENTS: "${AI_READ_ATTACHMENTS:-true}"
       AI_READ_IMAGES: "${AI_READ_IMAGES:-true}"
       UPLOAD_DIR: /data/uploads
     volumes:

@@ -170,7 +170,7 @@ export default function Shell({ user, projectId, tab, onLogout, children }) {
         )}
         <div className={`work-body${showMemo && memoOpen ? ' work-panel-open' : ''}`}>
           <div id="content">{children}</div>
-          {showMemo && <MemoPanel projectId={projectId} open={memoOpen} refreshKey={tab} onClose={() => setMemoOpen(false)} />}
+          {showMemo && <MemoPanel key={projectId} projectId={projectId} open={memoOpen} refreshKey={tab} onClose={() => setMemoOpen(false)} />}
         </div>
       </main>
     </div>

@@ -59,8 +59,8 @@ export default function CatalogManager({ projectId }) {
     <div className="row wrap"><h2>문서에 사용할 정보</h2><button type="button" onClick={() => setKind('products')}>제품</button><button type="button" onClick={() => setKind('contacts')}>거래처</button><button type="button" onClick={() => edit(null)}>추가</button></div>
     {error && !form && <p role="alert">{error}</p>}
     {rows.map((row) => <div className="row between" key={row.id}><span>{row.name || '이름 없는 제품'} {row.status === 'draft' ? '· 작성 중' : ''}{row.price_estimated ? ' · 예상 가격' : ''}</span><button type="button" onClick={() => edit(row)}>편집</button></div>)}
-    {form && <AgentDialog title={kind === 'products' ? '제품 정보' : '거래처 정보'} onClose={() => setForm(null)}>
-      <div className="stack">
+    {form && <AgentDialog title={kind === 'products' ? '제품 정보' : '거래처 정보'} onClose={() => { setForm(null); setError('') }}>
+      <div className="stack catalog-form">
         <fieldset className="stack" disabled={busy || uncertain}>
         {(kind === 'products' ? [['name', '제품명'], ['intent', '기획 의도'], ['material', '재료'], ['process', '제작 과정']] : [['name', '거래처명'], ['category', '분류'], ['contact', '연락처'], ['note', '기록']]).map(([field, label]) => <label key={field}>{label}<input value={form[field]} onChange={(e) => set(field, e.target.value)} /></label>)}
         {kind === 'contacts' ? <label>사용 범위<select value={form.scope} onChange={(e) => set('scope', e.target.value)}><option value="project">현재 프로젝트</option><option value="brand">브랜드 공통</option></select></label> : <>

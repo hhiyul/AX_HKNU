@@ -33,6 +33,17 @@ def missing(product):
     return required
 
 
+def missing_label(field):
+    labels = {"name": "제품명", "intent": "기획 의도", "material": "재료", "process": "제작 과정",
+              "photo_ids": "제품 사진", "options": "제품 옵션", "quantity_date": "초기 수량 기준일",
+              "sale_price": "기본 판매가", "size": "크기", "color": "색상", "initial_quantity": "기존 수량",
+              "produced_quantity": "제작 완료 수량", "sold_quantity": "기존 판매 수량", "replenishment_threshold": "재입고 기준 수량"}
+    if field.startswith("options."):
+        _, index, key = field.split(".")
+        return f"옵션 {int(index) + 1} {('옵션명' if key == 'name' else labels[key])}"
+    return labels[field]
+
+
 async def validate_product(db, user_id, body, old=None):
     if body.get("quantity_date"):
         try:
@@ -48,7 +59,7 @@ async def validate_product(db, user_id, body, old=None):
         if (option.get("sold_quantity") or 0) > total:
             raise AppError(422, "INVALID_QUANTITY", "기존 판매 수량이 초기·제작 수량보다 많습니다.")
     if body["status"] == "registered" and missing(body):
-        raise AppError(422, "PRODUCT_INCOMPLETE", "등록에 필요한 정보: " + ", ".join(missing(body)))
+        raise AppError(422, "PRODUCT_INCOMPLETE", "등록에 필요한 정보: " + ", ".join(map(missing_label, missing(body))))
     if old and old.get("quantity_initialized_at"):
         fields = ("initial_quantity", "produced_quantity", "sold_quantity")
         prior = [[o.get(k) for k in fields] for o in old["options"]]

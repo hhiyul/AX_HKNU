@@ -10,6 +10,7 @@ import ReferenceScope, { AnswerSources } from '../components/ReferenceScope.jsx'
 import TaskConfirmation from '../components/TaskConfirmation.jsx'
 import RecordConfirmation from '../components/RecordConfirmation.jsx'
 import DocumentStart from '../components/DocumentStart.jsx'
+import { runOutcomeText } from '../components/runOutcome.js'
 import { go, paths } from '../router.js'
 
 const PURPOSE = { document_assist: '문서 작성 도움', task_proposal: '할 일 제안' }
@@ -218,7 +219,7 @@ export default function Chat({ projectId, conversationId }) {
             </article>
           )}
           {(ready ? messages : []).map((m) => (m.role === 'USER' ? (
-            <div key={m.id} className="msg user"><FileChips items={attached(m)} /><p>{m.content}</p></div>
+            <div key={m.id} className="msg user"><FileChips items={attached(m)} /><p>{m.content}</p>{runOutcomeText(m.run_outcome) && <p className="notice" role="status">{runOutcomeText(m.run_outcome)}</p>}</div>
           ) : (
             <article key={m.id} className="msg assistant">
               <div className="name">AX STUDIO{m.purpose && <span className="muted"> · {PURPOSE[m.purpose] || m.purpose}</span>}</div>

@@ -1,0 +1,3315 @@
+{
+  "project_id": "6b07c1e4b7cd9686e73f19cb",
+  "provider": "openai",
+  "model": "gpt-6-luna",
+  "runs": [
+    {
+      "_id": {
+        "$oid": "6b07c252b7cd9686e73f19d3"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07c252b7cd9686e73f19d4"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07c2a1b7cd9686e73f19d7"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T05:23:30.431Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T05:24:49.894Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T05:24:49.894Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 4,
+          "reported": 4,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 7159,
+          "output_tokens": 225,
+          "total_tokens": 7384
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07c570b7cd9686e73f19da"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "failed",
+      "user_message_id": {
+        "$oid": "6b07c570b7cd9686e73f19db"
+      },
+      "assistant_message_id": null,
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T05:36:48.516Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T05:38:25.832Z"
+      },
+      "delivery": "not_dispatched",
+      "error_code": "CONNECTION_FAILED",
+      "finished_at": {
+        "$date": "2026-11-26T05:38:25.832Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 1,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07c704b7cd9686e73f19dc"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "failed",
+      "user_message_id": {
+        "$oid": "6b07c704b7cd9686e73f19dd"
+      },
+      "assistant_message_id": null,
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T05:43:32.350Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T05:44:17.107Z"
+      },
+      "delivery": "not_dispatched",
+      "error_code": "CONNECTION_FAILED",
+      "finished_at": {
+        "$date": "2026-11-26T05:44:17.107Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 1,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 2056,
+          "output_tokens": 53,
+          "total_tokens": 2109
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cb23b7cd9686e73f19de"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "unknown",
+      "user_message_id": {
+        "$oid": "6b07cb23b7cd9686e73f19df"
+      },
+      "assistant_message_id": null,
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:01:07.178Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:01:17.602Z"
+      },
+      "delivery": "unknown",
+      "error_code": "TRANSPORT_ERROR",
+      "finished_at": {
+        "$date": "2026-11-26T06:01:17.602Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 2,
+          "reported": 1,
+          "missing": 1,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 2119,
+          "output_tokens": 53,
+          "total_tokens": 2172
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf4bb7cd9686e73f19f1"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07cf4bb7cd9686e73f19f2"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07cf4fb7cd9686e73f19f3"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:18:51.258Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:18:55.765Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:18:55.765Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 1,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 2562,
+          "output_tokens": 55,
+          "total_tokens": 2617
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cfddb7cd9686e73f19f4"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07cfddb7cd9686e73f19f5"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07cfe0b7cd9686e73f19f6"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:21:17.471Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:21:20.273Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:21:20.273Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 1,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 2740,
+          "output_tokens": 108,
+          "total_tokens": 2848
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d011b7cd9686e73f19f7"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07d011b7cd9686e73f19f8"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07d013b7cd9686e73f19f9"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:22:09.171Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:22:11.942Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:22:11.942Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 1,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 1830,
+          "output_tokens": 66,
+          "total_tokens": 1896
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d0b7db36e00f37b70dcc"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07d0b7db36e00f37b70dcd"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07d0bedb36e00f37b70dce"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:24:55.893Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:25:02.219Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:25:02.219Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 3,
+          "reported": 3,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 8207,
+          "output_tokens": 147,
+          "total_tokens": 8354
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d0fcdb36e00f37b70dd1"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07d0fcdb36e00f37b70dd2"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07d110db36e00f37b70dd3"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:26:04.815Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:26:24.451Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:26:24.451Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 2,
+          "reported": 2,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 6561,
+          "output_tokens": 2254,
+          "total_tokens": 8815
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d140db36e00f37b70dd4"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "stopped",
+      "user_message_id": {
+        "$oid": "6b07d140db36e00f37b70dd5"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07d147db36e00f37b70dd6"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:27:12.802Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:27:19.216Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:27:19.216Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 0,
+          "missing": 1,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d14edb36e00f37b70dd7"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "status": "completed",
+      "user_message_id": {
+        "$oid": "6b07d14edb36e00f37b70dd8"
+      },
+      "assistant_message_id": {
+        "$oid": "6b07d151db36e00f37b70dd9"
+      },
+      "stop_requested": false,
+      "created_at": {
+        "$date": "2026-11-26T06:27:26.899Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:27:29.790Z"
+      },
+      "delivery": null,
+      "error_code": null,
+      "finished_at": {
+        "$date": "2026-11-26T06:27:29.790Z"
+      },
+      "usage": {
+        "compression": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        },
+        "generation": {
+          "calls": 1,
+          "reported": 1,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 6604,
+          "output_tokens": 243,
+          "total_tokens": 6847
+        },
+        "web_search": {
+          "calls": 0,
+          "reported": 0,
+          "missing": 0,
+          "pending": 0,
+          "not_dispatched": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0
+        }
+      }
+    }
+  ],
+  "reported_usage_total": {
+    "calls": 18,
+    "reported": 15,
+    "missing": 2,
+    "pending": 0,
+    "not_dispatched": 1,
+    "input_tokens": 39838,
+    "output_tokens": 3204,
+    "total_tokens": 43042
+  },
+  "messages": [
+    {
+      "_id": {
+        "$oid": "6b07c252b7cd9686e73f19d4"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 1,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "프로젝트 메모를 읽고 현재 등록된 일정을 확인해 주세요. 샘플 검수(2026-12-01)와 제품 촬영(2026-12-03) 두 할 일을 후보로 제안해 주세요. 제가 확인하기 전에는 등록하지 마세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [],
+        "message_ids": []
+      },
+      "scope_revision": 0,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07c252b7cd9686e73f19d3"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T05:23:30.451Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07c2a1b7cd9686e73f19d7"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 2,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "ASSISTANT",
+      "content": "프로젝트 메모는 현재 읽을 수 있는 내용이 없어 확인하지 못했습니다. 현재 등록된 일정은 없습니다.\n\n요청하신 두 할 일을 등록 후보로 제안했습니다. 아직 등록되지는 않았으며, 확인해 주시면 다음 단계를 진행하겠습니다.\n\n- 샘플 검수 — 2026-12-01\n- 제품 촬영 — 2026-12-03",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "linked_brand",
+        "project_basic"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [],
+        "message_ids": []
+      },
+      "scope_revision": 0,
+      "request_id": {
+        "$oid": "6b07c252b7cd9686e73f19d3"
+      },
+      "continuation_of": null,
+      "proposals": [
+        {
+          "proposal_id": {
+            "$oid": "6b07c29fb7cd9686e73f19d5"
+          },
+          "title": "샘플 검수",
+          "suggested_date": "2026-12-01",
+          "note": "샘플 상태와 마감·품질을 확인합니다."
+        },
+        {
+          "proposal_id": {
+            "$oid": "6b07c29fb7cd9686e73f19d6"
+          },
+          "title": "제품 촬영",
+          "suggested_date": "2026-12-03",
+          "note": "제품 사진 촬영을 진행합니다."
+        }
+      ],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T05:24:49.892Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07c570b7cd9686e73f19db"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 3,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "현재 허용 범위의 메모와 등록된 일정을 다시 읽어 제품 소개 3문장과 진행 요약을 작성해 주세요. 실제 조회한 일정만 보고하고, 원가를 추측하지 마세요. 이 내용을 기록 후보로도 제안해 주세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07c570b7cd9686e73f19da"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T05:36:48.517Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07c704b7cd9686e73f19dd"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 4,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "이전 요청이 전송 전 연결 실패로 끝났으니 다시 요청합니다. 현재 허용 범위의 메모와 실제 등록 일정을 읽고 제품 소개 3문장과 진행 요약을 작성해 주세요. 원가는 추측하지 말고 기록 후보도 제안해 주세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07c704b7cd9686e73f19dc"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T05:43:32.351Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cb23b7cd9686e73f19df"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 5,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "연결 복구 후 다시 요청합니다. 메모 원문과 허용된 등록 일정을 읽고 300ml 머그의 제품 소개 3문장과 진행 요약을 작성한 뒤 기록 후보로 제안해 주세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07cb23b7cd9686e73f19de"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:01:07.179Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf4bb7cd9686e73f19f2"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 6,
+      "conversation_id": null,
+      "role": "USER",
+      "content": "[작품·프로젝트 소개] 초안 만들기: 선택한 제품과 TXT 원문만 근거로 달빛 머그 소개를 3문장으로 작성해 주세요. 원문 확인 문구 MOON 코드도 마지막에 쓰세요. 원가 및 사용 적합성은 추측하지 마세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "purpose": "document_assist",
+      "target_doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "target_section_id": "F01",
+      "request_id": {
+        "$oid": "6b07cf4bb7cd9686e73f19f1"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:18:51.259Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf4fb7cd9686e73f19f3"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 7,
+      "conversation_id": null,
+      "role": "ASSISTANT",
+      "content": "달빛 머그는 일상에 쓰는 선물용 백자 머그입니다. 물레 성형 후 고온 소성으로 만들며, 용량은 300ml입니다. 원문 확인 문구: MOON-7319",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "file:6b07cca1b7cd9686e73f19e0",
+        "file:6b07ce0bb7cd9686e73f19e1",
+        "linked_brand",
+        "message:6b07c2a1b7cd9686e73f19d7",
+        "product:6b07cef3b7cd9686e73f19e4",
+        "project_basic",
+        "target:6b07cf26b7cd9686e73f19e8:F01"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "message:6b07c2a1b7cd9686e73f19d7",
+          "kind": "message",
+          "title": "선택한 지난 대화",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:18:51.176606+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "file:6b07ce0bb7cd9686e73f19e1",
+          "kind": "file",
+          "title": "mug-reference.txt",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:18:51.180523+00:00",
+          "offset": 0,
+          "length": 150,
+          "status": "read"
+        },
+        {
+          "key": "file:6b07ce0bb7cd9686e73f19e1",
+          "kind": "file",
+          "title": "mug-reference.txt",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:18:51.180564+00:00",
+          "status": "read",
+          "length": 150,
+          "next_offset": null
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "달빛 머그 300ml",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:18:51.184898+00:00",
+          "offset": 0,
+          "length": 725,
+          "status": "read"
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "달빛 머그 300ml",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:18:51.184919+00:00",
+          "status": "read",
+          "length": 725,
+          "next_offset": null
+        },
+        {
+          "key": "file:6b07cca1b7cd9686e73f19e0",
+          "kind": "file",
+          "title": "선택 제품 사진",
+          "status": "read"
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "product:6b07cef3b7cd9686e73f19e4",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:18:51.256696+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "target:6b07cf26b7cd9686e73f19e8:F01",
+          "kind": "target",
+          "title": "target:6b07cf26b7cd9686e73f19e8:F01",
+          "revision": 0,
+          "fetched_at": "2026-11-26T06:18:51.256725+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": [
+          "6b07c2a1b7cd9686e73f19d7"
+        ],
+        "_target_doc_id": "6b07cf26b7cd9686e73f19e8"
+      },
+      "scope_revision": 2,
+      "request_id": {
+        "$oid": "6b07cf4bb7cd9686e73f19f1"
+      },
+      "continuation_of": null,
+      "purpose": "document_assist",
+      "target_doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "target_section_id": "F01",
+      "assist_action": "draft",
+      "checked_revision": null,
+      "candidate": {
+        "doc_id": {
+          "$oid": "6b07cf26b7cd9686e73f19e8"
+        },
+        "section_id": "F01",
+        "base_revision": 0,
+        "base_draft_revision": 0,
+        "text": "달빛 머그는 일상에 쓰는 선물용 백자 머그입니다. 물레 성형 후 고온 소성으로 만들며, 용량은 300ml입니다. 원문 확인 문구: MOON-7319",
+        "references": [
+          {
+            "type": "message",
+            "id": "6b07c2a1b7cd9686e73f19d7"
+          },
+          {
+            "type": "file",
+            "id": "6b07ce0bb7cd9686e73f19e1"
+          },
+          {
+            "type": "product",
+            "id": "6b07cef3b7cd9686e73f19e4"
+          }
+        ]
+      },
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:18:55.764Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cfddb7cd9686e73f19f5"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 8,
+      "conversation_id": null,
+      "role": "USER",
+      "content": "[작품·프로젝트 소개] AI 내용 점검: 저장된 소개와 선택 자료가 일치하는지 3줄 이내로 점검해 주세요. 본문은 바꾸지 말고 미확정 사항을 지적해 주세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "purpose": "document_assist",
+      "target_doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "target_section_id": "F01",
+      "request_id": {
+        "$oid": "6b07cfddb7cd9686e73f19f4"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:21:17.471Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cfe0b7cd9686e73f19f6"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 9,
+      "conversation_id": null,
+      "role": "ASSISTANT",
+      "content": "저장된 소개의 제품명·용량·백자 재료·물레 성형 후 고온 소성·선물용 설명은 선택한 제품 정보 및 TXT 원문과 일치합니다.\n확인 필요: 원가가 미확정이며, 식기세척기·전자레인지 사용 가능 여부도 확인되지 않았습니다.\n이미지는 합성 머그 그림으로, 실제 제품의 재료나 세부 사양을 확인하는 근거로는 볼 수 없습니다.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "file:6b07cca1b7cd9686e73f19e0",
+        "file:6b07ce0bb7cd9686e73f19e1",
+        "linked_brand",
+        "message:6b07c2a1b7cd9686e73f19d7",
+        "product:6b07cef3b7cd9686e73f19e4",
+        "project_basic",
+        "target:6b07cf26b7cd9686e73f19e8:F01"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T05:23:30.489192+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "message:6b07c2a1b7cd9686e73f19d7",
+          "kind": "message",
+          "title": "선택한 지난 대화",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:21:17.443740+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "file:6b07ce0bb7cd9686e73f19e1",
+          "kind": "file",
+          "title": "mug-reference.txt",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:21:17.446584+00:00",
+          "offset": 0,
+          "length": 150,
+          "status": "read"
+        },
+        {
+          "key": "file:6b07ce0bb7cd9686e73f19e1",
+          "kind": "file",
+          "title": "mug-reference.txt",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:21:17.446609+00:00",
+          "status": "read",
+          "length": 150,
+          "next_offset": null
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "달빛 머그 300ml",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:21:17.450257+00:00",
+          "offset": 0,
+          "length": 725,
+          "status": "read"
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "달빛 머그 300ml",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:21:17.450278+00:00",
+          "status": "read",
+          "length": 725,
+          "next_offset": null
+        },
+        {
+          "key": "file:6b07cca1b7cd9686e73f19e0",
+          "kind": "file",
+          "title": "선택 제품 사진",
+          "status": "read"
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "product:6b07cef3b7cd9686e73f19e4",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:21:17.462274+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "target:6b07cf26b7cd9686e73f19e8:F01",
+          "kind": "target",
+          "title": "target:6b07cf26b7cd9686e73f19e8:F01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:21:17.462303+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": [
+          "6b07c2a1b7cd9686e73f19d7"
+        ],
+        "_target_doc_id": "6b07cf26b7cd9686e73f19e8"
+      },
+      "scope_revision": 3,
+      "request_id": {
+        "$oid": "6b07cfddb7cd9686e73f19f4"
+      },
+      "continuation_of": null,
+      "purpose": "document_assist",
+      "target_doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "target_section_id": "F01",
+      "assist_action": "check",
+      "checked_revision": 1,
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:21:20.271Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d011b7cd9686e73f19f8"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 10,
+      "conversation_id": null,
+      "role": "USER",
+      "content": "[고객과 구매 가치] 초안 만들기: 외부 참고는 추가하지 말고 같은 문서의 저장된 소개 항목에서 제품명·용량·원문 확인 코드를 읽어 고객 가치 초안을 2문장으로 써 주세요. 새 사실은 만들지 마세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "purpose": "document_assist",
+      "target_doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "target_section_id": "F02",
+      "request_id": {
+        "$oid": "6b07d011b7cd9686e73f19f7"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:22:09.171Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d013b7cd9686e73f19f9"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 11,
+      "conversation_id": null,
+      "role": "ASSISTANT",
+      "content": "달빛 머그는 일상에 사용하는 선물용 백자 머그로, 300ml 용량입니다. 확인 필요: 어떤 고객이 어떤 상황에서 사용하며, 어떤 점을 구매 가치로 느끼는지 확인이 필요합니다. 원문 확인 코드: MOON-7319",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "file:6b07cca1b7cd9686e73f19e0",
+        "product:6b07cef3b7cd9686e73f19e4",
+        "target:6b07cf26b7cd9686e73f19e8:F01",
+        "target:6b07cf26b7cd9686e73f19e8:F02"
+      ],
+      "source_manifest": [
+        {
+          "key": "file:6b07cca1b7cd9686e73f19e0",
+          "kind": "file",
+          "title": "선택 제품 사진",
+          "status": "read"
+        },
+        {
+          "key": "product:6b07cef3b7cd9686e73f19e4",
+          "kind": "product",
+          "title": "product:6b07cef3b7cd9686e73f19e4",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:22:09.169244+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "target:6b07cf26b7cd9686e73f19e8:F01",
+          "kind": "target",
+          "title": "target:6b07cf26b7cd9686e73f19e8:F01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:22:09.169244+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "target:6b07cf26b7cd9686e73f19e8:F02",
+          "kind": "target",
+          "title": "target:6b07cf26b7cd9686e73f19e8:F02",
+          "revision": 0,
+          "fetched_at": "2026-11-26T06:22:09.169265+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": [],
+        "_target_doc_id": "6b07cf26b7cd9686e73f19e8"
+      },
+      "scope_revision": 1,
+      "request_id": {
+        "$oid": "6b07d011b7cd9686e73f19f7"
+      },
+      "continuation_of": null,
+      "purpose": "document_assist",
+      "target_doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "target_section_id": "F02",
+      "assist_action": "draft",
+      "checked_revision": null,
+      "candidate": {
+        "doc_id": {
+          "$oid": "6b07cf26b7cd9686e73f19e8"
+        },
+        "section_id": "F02",
+        "base_revision": 0,
+        "base_draft_revision": 0,
+        "text": "달빛 머그는 일상에 사용하는 선물용 백자 머그로, 300ml 용량입니다. 확인 필요: 어떤 고객이 어떤 상황에서 사용하며, 어떤 점을 구매 가치로 느끼는지 확인이 필요합니다. 원문 확인 코드: MOON-7319",
+        "references": []
+      },
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:22:11.941Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d0b7db36e00f37b70dcd"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 12,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "현재 허용된 일정만 실제 조회해서 제목과 날짜를 짧게 보고해 주세요. 그 결과를 기록 후보 하나로 제안해 주세요. 제가 확인하기 전에는 저장하지 마세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07d0b7db36e00f37b70dcc"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:24:55.894Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d0bedb36e00f37b70dce"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 13,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "ASSISTANT",
+      "content": "현재 확인된 등록 일정은 **샘플 검수 — 2026-12-01**입니다.\n\n이 내용을 기록 후보로 제안했습니다. **아직 저장되지 않았으며**, 검토 후 직접 승인해 주세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": {
+        "title": "현재 등록된 일정 확인",
+        "content": "현재 확인된 등록 일정: 샘플 검수 — 2026-12-01. 일정은 허용된 프로젝트 조회 결과를 기준으로 작성했으며, 제품 촬영 일정은 확인되지 않았습니다."
+      },
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "doc:6b07cf26b7cd9686e73f19e8",
+        "linked_brand",
+        "project_basic",
+        "project_memo",
+        "task:6b07c399b7cd9686e73f19d8",
+        "tasks"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 3,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "doc:6b07cf26b7cd9686e73f19e8",
+          "kind": "document",
+          "title": "펀딩 상세페이지",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "tasks",
+          "kind": "task",
+          "title": "tasks",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "task:6b07c399b7cd9686e73f19d8",
+          "kind": "task",
+          "title": "샘플 검수",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read"
+        },
+        {
+          "key": "project_memo",
+          "kind": "memo",
+          "title": "project_memo",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "request_id": {
+        "$oid": "6b07d0b7db36e00f37b70dcc"
+      },
+      "continuation_of": null,
+      "proposals": [],
+      "record_key": "m6b07d0bedb36e00f37b70dce",
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:25:02.217Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d0fcdb36e00f37b70dd2"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 14,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "중단 후 이어서 생성 동작을 검증합니다. 외부 자료 조회 없이 머그 사진 촬영 준비 체크리스트를 1부터 60까지 한 항목당 2문장으로 작성해 주세요. 검증을 위해 길게 쓰되 실제 일정이나 기록 후보를 만들지 마세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07d0fcdb36e00f37b70dd1"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:26:04.817Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d110db36e00f37b70dd3"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 15,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "ASSISTANT",
+      "content": "확인한 프로젝트 메모에는 300ml 백자 머그(손잡이 포함), 선물을 찾는 직장인 대상, 기본 판매가 28,000원, 원가 견적 미확정이라고 적혀 있습니다. 등록된 일정은 샘플 검수(2026-12-01) 하나입니다. 아래는 외부 자료 없이 만든 촬영 준비용 제안이며, 실제 일정이나 기록 후보는 만들지 않습니다. 60개를 각 2문장으로 모두 작성하면 답변이 매우 길어져, 우선 1~20번을 제공합니다. 이어서 원하시면 21~60번을 계속할게요.\n\n1. 촬영 목적을 먼저 정리합니다. 선물용 머그의 형태와 사용 장면을 잘 보여주는 것을 목표로 합니다.\n2. 촬영할 머그의 상태를 확인합니다. 흠집이나 오염이 있는지 살피고 발견 사항을 메모합니다.\n3. 샘플 검수 결과와 촬영 대상을 대조합니다. 아직 확인되지 않은 품질 정보를 사진 설명에 단정적으로 쓰지 않습니다.\n4. 머그의 앞면과 뒷면을 확인합니다. 로고나 장식이 있다면 카메라에 보일 방향을 정합니다.\n5. 손잡이가 잘 드러나는 각도를 찾아봅니다. 손잡이의 형태와 머그 본체가 함께 보이는지 확인합니다.\n6. 머그 안쪽이 보이는 구도를 준비합니다. 내부 유약이나 마감은 실제 확인한 모습만 표현합니다.\n7. 용량 표기가 필요한지 검토합니다. 300ml라는 프로젝트 메모의 정보와 제품 실물이 일치하는지 촬영 전 확인합니다.\n8. 제품 표면을 부드러운 천으로 닦습니다. 표면을 손상시키거나 광택을 바꿀 수 있는 재료는 피합니다.\n9. 촬영 전 손자국이 남지 않았는지 확인합니다. 장갑을 쓴다면 제품을 안정적으로 잡을 수 있는지 점검합니다.\n10. 촬영 공간을 정돈합니다. 사진에 불필요한 물건이나 개인 정보가 나오지 않도록 합니다.\n11. 배경지를 준비합니다. 머그의 흰색이 배경에 묻히지 않는 색을 선택합니다.\n12. 배경의 주름과 얼룩을 확인합니다. 촬영 전에 정리해 제품에 시선이 집중되게 합니다.\n13. 자연광을 사용할 위치를 살펴봅니다. 빛이 너무 강하거나 색이 지나치게 변하지 않는 자리를 고릅니다.\n14. 인공 조명을 쓴다면 밝기와 색감을 점검합니다. 여러 조명의 색이 섞여 제품 색을 왜곡하지 않게 합니다.\n15. 그림자의 방향을 확인합니다. 손잡이와 머그의 윤곽이 배경에 묻히지 않도록 배치합니다.\n16. 반사광을 점검합니다. 백자 표면의 하이라이트가 형태를 가리지 않는지 확인합니다.\n17. 카메라 렌즈를 닦습니다. 먼지나 지문이 사진에 번지지 않도록 합니다.\n18. 촬영 기기의 배터리와 저장 공간을 확인합니다. 촬영 도중 중단되지 않도록 여유를 둡니다.\n19. 삼각대나 거치대를 준비합니다. 제품의 크기와 각도를 반복해서 일관되게 찍을 수 있도록 고정합니다.\n20. 촬영할 컷 목록을 적어 둡니다. 정면, 측면, 손잡이, 내부와 사용 장면을 빠뜨리지 않도록 합니다. \n\n∎\n</|DELIM_Zenith|> \n\n (Need continue? user asks 1-60. We stopped due arbitrary, bad. Need output remaining, exactly 2 sentences each. Since response already emitted? tool commentary is visible maybe final continue. But user asked full, produce 1-60 in final, avoid duplicate? We can give 21-60 only as continuation, but prior says asked continue. Better deliver 21-60.21. 정면 구도를 촬영합니다. 머그의 전체 실루엣과 입구가 자연스럽게 보이도록 합니다.\n22. 측면 구도를 촬영합니다. 본체의 깊이와 손잡이의 돌출 정도를 살펴볼 수 있게 합니다.\n23. 손잡이가 잘 보이는 방향에서 촬영합니다. 손잡이 안쪽이 가려지지 않는지 확인합니다.\n24. 위쪽에서 내려다보는 컷을 준비합니다. 입구와 내부가 보이되 형태가 과장되어 보이지 않도록 합니다.\n25. 낮은 시점의 컷도 촬영합니다. 머그의 높이와 바닥 형태를 보여주는 데 활용합니다.\n26. 가까운 거리에서 표면을 촬영합니다. 실제 질감과 마감이 선명하게 보이는지 확인합니다.\n27. 바닥면을 보여줄 필요가 있는지 검토합니다. 제품 정보를 전달하는 데 필요한 경우에만 촬영합니다.\n28. 머그를 여러 방향으로 천천히 돌려 봅니다. 각 방향의 특징이나 눈에 띄는 차이가 있는지 확인합니다.\n29. 제품을 화면 중앙에 놓은 컷을 찍습니다. 상세페이지에 활용하기 쉽도록 주변 여백도 확보합니다.\n30. 여백을 넉넉히 둔 구도를 찍습니다. 문구나 그래픽을 나중에 배치할 가능성을 고려합니다.\n31. 머그를 손에 든 장면을 준비합니다. 크기 감이 전달되도록 손잡이를 안정적으로 잡습니다.\n32. 손이 제품을 가리는 정도를 확인합니다. 손잡이와 본체의 주요 형태가 보이도록 손 위치를 조정합니다.\n33. 머그를 테이블 위에 둔 장면을 촬영합니다. 일상적인 사용 환경처럼 보이되 배경 소품은 절제합니다.\n34. 음료를 함께 연출할지 결정합니다. 실제 용도와 무관한 인상을 주거나 제품 정보를 오해하게 하지 않도록 합니다.\n35. 음료를 담아 촬영한다면 넘침이나 얼룩을 확인합니다. 제품 자체가 잘 보이도록 담는 양과 색을 조절합니다.\n36. 선물 연출 소품을 준비합니다. 머그보다 시선을 끌지 않는 단순한 소품을 선택합니다.\n37. 포장재가 있다면 실제 제공 여부를 확인합니다. 제공이 확정되지 않은 포장을 리워드처럼 보이게 촬영하지 않습니다.\n38. 직장인의 선물 장면을 연출할지 검토합니다. 연출 사진은 실제 구성품과 혼동되지 않도록 구분합니다.\n39. 촬영 배경의 색과 소품을 함께 확인합니다. 백자 머그의 윤곽과 색이 배경에서 분명히 드러나야 합니다.\n40. 여러 컷의 노출과 색감을 비교합니다. 컷마다 머그가 서로 다른 색으로 보이지 않도록 맞춥니다.\n41. 촬영 중간에 결과물을 확대해 확인합니다. 초점이 흐리거나 표면에 먼지가 보이는 컷은 다시 촬영합니다.\n42. 손잡이 안쪽의 초점을 확인합니다. 형태를 보여주는 컷에서 중요한 부분이 흐려지지 않았는지 살핍니다.\n43. 머그의 수평과 수직을 점검합니다. 제품이 기울어 보이지 않도록 촬영 각도를 조정합니다.\n44. 같은 구도를 한 번 더 촬영합니다. 흔들림이나 초점 오류에 대비해 선택 가능한 컷을 확보합니다.\n45. 촬영 컷을 구도별로 구분해 저장합니다. 파일 이름이나 폴더로 정면, 디테일, 연출 컷을 쉽게 찾도록 합니다.\n46. 촬영 직후 파일을 열어 확인합니다. 저장 오류나 파일 손상이 없는지 살펴봅니다.\n47. 원본 사진을 별도로 보관합니다. 편집본과 구분해 필요할 때 다시 작업할 수 있도록 합니다.\n48. 편집할 컷을 선별합니다. 실제 제품과 다른 인상을 주는 과도한 보정은 피합니다.\n49. 밝기와 대비를 조정할 때 제품 색을 확인합니다. 백자의 색감과 표면 특징이 원본과 크게 달라지지 않도록 합니다.\n50. 배경 정리나 먼지 제거는 신중히 적용합니다. 제품의 실제 결함이나 형태를 숨기는 편집은 하지 않습니다.\n51. 사진의 잘림과 여백을 확인합니다. 상세페이지에 배치했을 때 손잡이나 입구가 잘리지 않게 합니다.\n52. 모바일 화면에서도 사진을 확인합니다. 작은 화면에서도 제품의 형태가 식별되는지 살펴봅니다.\n53. 사진에 설명 문구를 넣는다면 사실을 확인합니다. 용량이나 제작 방식처럼 확인된 정보만 사용합니다.\n54. 사용 장면과 제품 단독 컷을 구분합니다. 연출 컷이 실제 판매 구성으로 오해되지 않게 표시합니다.\n55. 촬영 전후 제품 상태를 비교합니다. 촬영 중 부딪힘이나 오염이 생기지 않았는지 확인합니다.\n56. 촬영 공간을 정리하고 소품을 회수합니다. 제품과 촬영 장비를 안전하게 정돈합니다.\n57. 최종 후보 사진을 한곳에 모읍니다. 상세페이지에 필요한 컷이 빠졌는지 목록과 대조합니다.\n58. 사진에 담긴 정보와 제품 정보를 대조합니다. 메모나 확인 자료와 다르게 보이는 부분이 있으면 사용 전에 다시 확인합니다.\n59. 최종 선택본을 별도 폴더에 정리합니다. 원본과 구분하고 파일을 찾기 쉬운 이름으로 저장합니다.\n60. 촬영이 끝나면 남은 확인 사항을 정리합니다. 제품 상태나 구성처럼 아직 확인되지 않은 내용은 추측하지 않고 확인 대상으로 남깁니다.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "doc:6b07cf26b7cd9686e73f19e8",
+        "linked_brand",
+        "project_basic",
+        "project_memo",
+        "record:m6b07d0bedb36e00f37b70dce",
+        "task:6b07c399b7cd9686e73f19d8",
+        "tasks"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 3,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "record:m6b07d0bedb36e00f37b70dce",
+          "kind": "record",
+          "title": "현재 등록된 일정 확인",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "doc:6b07cf26b7cd9686e73f19e8",
+          "kind": "document",
+          "title": "펀딩 상세페이지",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "tasks",
+          "kind": "task",
+          "title": "tasks",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "task:6b07c399b7cd9686e73f19d8",
+          "kind": "task",
+          "title": "샘플 검수",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read"
+        },
+        {
+          "key": "project_memo",
+          "kind": "memo",
+          "title": "project_memo",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:26:04.859253+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "request_id": {
+        "$oid": "6b07d0fcdb36e00f37b70dd1"
+      },
+      "continuation_of": null,
+      "proposals": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:26:24.449Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d140db36e00f37b70dd5"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 16,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "중단 버튼 검증용 요청입니다. 서론 없이 1부터 500까지 번호 목록으로 한국어 머그 촬영 아이디어를 작성해 주세요. 각 번호는 두 문장으로 쓰고, 실제 자료 조회나 저장은 하지 마세요.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": null,
+      "request_id": {
+        "$oid": "6b07d140db36e00f37b70dd4"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:27:12.802Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d147db36e00f37b70dd6"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 17,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "ASSISTANT",
+      "content": "500개를 모두 각 두 문장으로 작성하면 답변이 지나치게 길어질 수 있어, 우선 1~30번만 제공합니다. 실제 자료 조회나 저장은 하지 않았습니다.\n\n1. 머그를 정면에서 촬영합니다. 제품의 기본 형태가 한눈에 보이게 합니다.\n2. 머그를 옆에서 촬영합니다. 본체의 옆선과 손잡이를 함께 담습니다.\n3. 손잡이가 정면을 향하도록 놓습니다. 손잡이 형태를 분명히 보여줍니다.\n4. 머그를 위에서 내려다봅니다. 입구와 내부가 보이도록 촬영합니다.\n5. 머그를 낮은 시점에서 바라봅니다. 제품의 높이와 실루엣을 강조합니다.\n6. 머그를 화면 중앙에 놓습니다. 주변에 충분한 여백을 둡니다.\n7. 밝은 단색 배경을 사용합니다. 백자 머그의 윤곽이 배경에 묻히지 않게 합니다.\n8. 어두운 배경을 사용합니다. 밝은 머그와 배경의 대비를 살립니다.\n9. 자연광이 드는 곳에서 촬영합니다. 빛이 제품 표면에 부드럽게 닿도록 합니다.\n10. 창가에서 역광을 활용합니다. 머그의 윤곽선이 선명하게 드러나는지 확인합니다.\n11. 그림자가 생기는 방향을 바꿔 봅니다. 제품 형태가 잘 보이는 조명을 고릅니다.\n12. 머그를 나무 테이블 위에 놓습니다. 따뜻하고 편안한 분위기를 연출합니다.\n13. 린넨 천을 배경에 활용합니다. 차분한 생활 장면을 만들어 봅니다.\n14. 책상 위에 머그를 놓습니다. 일하는 공간에서의 사용 모습을 담습니다.\n15. 책 한 권과 머그를 함께 배치합니다. 제품이 소품에 가려지지 않게 합니다.\n16. 창가에 머그를 놓습니다. 빛과 여백을 활용해 조용한 분위기를 표현합니다.\n17. 꽃 한 송이를 곁에 둡니다. 소품은 머그보다 눈에 띄지 않게 고릅니다.\n18. 손으로 머그를 들어 올리는 장면을 촬영합니다. 손잡이를 잡은 모습이 자연스럽게 보이게 합니다.\n19. 머그를 테이블에 내려놓는 순간을 담습니다. 움직임이 부드럽고 안정적으로 보이는 컷을 고릅니다.\n20. 손잡이를 잡는 손의 위치를 바꿔 봅니다. 제품의 형태가 가려지지 않는 자세를 찾습니다.\n21. 빈 머그의 내부를 가까이 촬영합니다. 입구와 안쪽 마감이 잘 보이도록 합니다.\n22. 머그 표면의 디테일을 확대합니다. 실제 질감이 과장되지 않게 표현합니다.\n23. 손잡이 안쪽을 촬영합니다. 곡선과 연결 부분이 잘 보이는 각도를 찾습니다.\n24.",
+      "asset_ids": [],
+      "completion": "PARTIAL",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "doc:6b07cf26b7cd9686e73f19e8",
+        "linked_brand",
+        "project_basic",
+        "project_memo",
+        "record:m6b07d0bedb36e00f37b70dce",
+        "task:6b07c399b7cd9686e73f19d8",
+        "tasks"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 3,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "record:m6b07d0bedb36e00f37b70dce",
+          "kind": "record",
+          "title": "현재 등록된 일정 확인",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "doc:6b07cf26b7cd9686e73f19e8",
+          "kind": "document",
+          "title": "펀딩 상세페이지",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "tasks",
+          "kind": "task",
+          "title": "tasks",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "task:6b07c399b7cd9686e73f19d8",
+          "kind": "task",
+          "title": "샘플 검수",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read"
+        },
+        {
+          "key": "project_memo",
+          "kind": "memo",
+          "title": "project_memo",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:27:12.826076+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "request_id": {
+        "$oid": "6b07d140db36e00f37b70dd4"
+      },
+      "continuation_of": null,
+      "proposals": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:27:19.214Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d14edb36e00f37b70dd8"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 18,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "USER",
+      "content": "이어서 생성",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "continuation_of": {
+        "$oid": "6b07d147db36e00f37b70dd6"
+      },
+      "request_id": {
+        "$oid": "6b07d14edb36e00f37b70dd7"
+      },
+      "source_keys": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:27:26.901Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07d151db36e00f37b70dd9"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "ordinal": 19,
+      "conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "role": "ASSISTANT",
+      "content": "24. 머그를 살짝 비스듬히 놓고 촬영합니다. 입구와 손잡이가 한 프레임에서 자연스럽게 보이도록 합니다.\n25. 머그를 회전판 위에 놓고 방향별로 촬영합니다. 각 방향의 실루엣을 비교해 가장 잘 드러나는 컷을 고릅니다.\n26. 머그와 손잡이의 연결 부위를 가까이 담습니다. 마감 상태가 실제 모습 그대로 보이게 초점을 맞춥니다.\n27. 머그를 빈 테이블 위에 단독으로 놓습니다. 형태에 시선이 집중되도록 주변을 단순하게 유지합니다.\n28. 머그를 작은 받침 옆에 배치합니다. 받침이 실제 상품 구성품인지 사진과 설명에서 혼동되지 않게 합니다.\n29. 머그에 물을 담아 촬영합니다. 수면과 내부가 보이도록 각도를 잡습니다.\n30. 물을 담은 머그를 옆에서 촬영합니다. 담긴 양이 제품의 용량을 오해하게 만들지 않는지 확인합니다.",
+      "asset_ids": [],
+      "completion": "COMPLETE",
+      "doc": null,
+      "source_ids": [],
+      "record_draft": null,
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "doc:6b07cf26b7cd9686e73f19e8",
+        "linked_brand",
+        "project_basic",
+        "project_memo",
+        "record:m6b07d0bedb36e00f37b70dce",
+        "task:6b07c399b7cd9686e73f19d8",
+        "tasks"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 3,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "record:m6b07d0bedb36e00f37b70dce",
+          "kind": "record",
+          "title": "현재 등록된 일정 확인",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "doc:6b07cf26b7cd9686e73f19e8",
+          "kind": "document",
+          "title": "펀딩 상세페이지",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "tasks",
+          "kind": "task",
+          "title": "tasks",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "task:6b07c399b7cd9686e73f19d8",
+          "kind": "task",
+          "title": "샘플 검수",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read"
+        },
+        {
+          "key": "project_memo",
+          "kind": "memo",
+          "title": "project_memo",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:27:26.930698+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1,
+      "request_id": {
+        "$oid": "6b07d14edb36e00f37b70dd7"
+      },
+      "continuation_of": {
+        "$oid": "6b07d147db36e00f37b70dd6"
+      },
+      "proposals": [],
+      "record_key": null,
+      "doc_key": null,
+      "created_at": {
+        "$date": "2026-11-26T06:27:29.788Z"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "_id": {
+        "$oid": "6b07c399b7cd9686e73f19d8"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "title": "샘플 검수",
+      "date": "2026-12-01",
+      "note": "샘플 상태와 마감·품질을 확인합니다.",
+      "done": false,
+      "source_doc_id": null,
+      "source_section_id": null,
+      "source_proposal_id": {
+        "$oid": "6b07c29fb7cd9686e73f19d5"
+      },
+      "deleted_at": null,
+      "revision": 1,
+      "created_at": {
+        "$date": "2026-11-26T05:28:57.313Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T05:28:57.313Z"
+      },
+      "purpose_ids": [],
+      "source_conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "source_message_id": {
+        "$oid": "6b07c2a1b7cd9686e73f19d7"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07c399b7cd9686e73f19d9"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "title": "제품 촬영",
+      "date": "2026-12-03",
+      "note": "제품 사진 촬영을 진행합니다.",
+      "done": false,
+      "source_doc_id": null,
+      "source_section_id": null,
+      "source_proposal_id": {
+        "$oid": "6b07c29fb7cd9686e73f19d6"
+      },
+      "deleted_at": null,
+      "revision": 1,
+      "created_at": {
+        "$date": "2026-11-26T05:28:57.323Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T05:28:57.323Z"
+      },
+      "purpose_ids": [
+        "funding",
+        "business_plan"
+      ],
+      "source_conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "source_message_id": {
+        "$oid": "6b07c2a1b7cd9686e73f19d7"
+      }
+    }
+  ],
+  "records": [
+    {
+      "_id": {
+        "$oid": "6b07d0eadb36e00f37b70dd0"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "kind": "record",
+      "key": "m6b07d0bedb36e00f37b70dce",
+      "title": "현재 등록된 일정 확인",
+      "content": "현재 확인된 등록 일정: 샘플 검수 — 2026-12-01. 일정은 허용된 프로젝트 조회 결과를 기준으로 작성했으며, 제품 촬영 일정은 확인되지 않았습니다.",
+      "message_id": {
+        "$oid": "6b07d0bedb36e00f37b70dce"
+      },
+      "source_keys": [
+        "ck_01",
+        "ck_02",
+        "ck_03",
+        "ck_04",
+        "ck_05",
+        "ck_06",
+        "doc:6b07cf26b7cd9686e73f19e8",
+        "linked_brand",
+        "project_basic",
+        "project_memo",
+        "task:6b07c399b7cd9686e73f19d8",
+        "tasks"
+      ],
+      "source_manifest": [
+        {
+          "key": "project_basic",
+          "kind": "project",
+          "title": "AG-P5 브라우저 검증 — 도자 머그",
+          "revision": 3,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "linked_brand",
+          "kind": "brand",
+          "title": "linked_brand",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_01",
+          "kind": "plan",
+          "title": "ck_01",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_02",
+          "kind": "plan",
+          "title": "ck_02",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_03",
+          "kind": "plan",
+          "title": "ck_03",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_04",
+          "kind": "plan",
+          "title": "ck_04",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_05",
+          "kind": "plan",
+          "title": "ck_05",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "ck_06",
+          "kind": "plan",
+          "title": "ck_06",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "doc:6b07cf26b7cd9686e73f19e8",
+          "kind": "document",
+          "title": "펀딩 상세페이지",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "tasks",
+          "kind": "task",
+          "title": "tasks",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        },
+        {
+          "key": "task:6b07c399b7cd9686e73f19d8",
+          "kind": "task",
+          "title": "샘플 검수",
+          "revision": 1,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read"
+        },
+        {
+          "key": "project_memo",
+          "kind": "memo",
+          "title": "project_memo",
+          "revision": null,
+          "fetched_at": "2026-11-26T06:24:55.917942+00:00",
+          "status": "read",
+          "length": null,
+          "next_offset": null
+        }
+      ],
+      "origin_conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "revision": 1,
+      "created_at": {
+        "$date": "2026-11-26T06:25:46.852Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:25:46.852Z"
+      }
+    }
+  ],
+  "documents": [
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "title": "펀딩 상세페이지",
+      "template_id": "funding",
+      "template_version": 1,
+      "last_section_id": "F01",
+      "deleted_at": null,
+      "revision": 1,
+      "created_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      },
+      "updated_at": {
+        "$date": "2026-11-26T06:21:02.973Z"
+      },
+      "purpose_ids": [
+        "funding"
+      ],
+      "product_snapshots": [
+        {
+          "_id": {
+            "$oid": "6b07cef3b7cd9686e73f19e4"
+          },
+          "name": "달빛 머그 300ml",
+          "intent": "일상에 쓰는 선물용 백자 머그",
+          "material": "백자",
+          "process": "물레 성형 후 고온 소성",
+          "photo_ids": [
+            "6b07cca1b7cd9686e73f19e0"
+          ],
+          "cost": null,
+          "sale_price": 28000,
+          "price_estimated": true,
+          "quantity_date": "2026-11-26",
+          "options": [
+            {
+              "name": "기본",
+              "size": "300ml",
+              "color": "백색",
+              "sale_price": null,
+              "initial_quantity": 10,
+              "produced_quantity": 0,
+              "sold_quantity": 0,
+              "replenishment_threshold": 2,
+              "inventory": 10
+            }
+          ],
+          "status": "registered",
+          "quantity_initialized_at": {
+            "$date": "2026-11-26T06:17:23.107Z"
+          },
+          "project_id": {
+            "$oid": "6b07c1e4b7cd9686e73f19cb"
+          },
+          "brand_id": null,
+          "updated_at": {
+            "$date": "2026-11-26T06:17:23.107Z"
+          },
+          "revision": 1,
+          "created_at": {
+            "$date": "2026-11-26T06:17:23.107Z"
+          }
+        }
+      ],
+      "origin_message_id": {
+        "$oid": "6b07c2a1b7cd9686e73f19d7"
+      },
+      "origin_conversation_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "origin_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "origin_section_id": "F01"
+    }
+  ],
+  "sections": [
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e9"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F01",
+      "text": "달빛 머그는 일상에 쓰는 선물용 백자 머그입니다. 물레 성형 후 고온 소성으로 만들며, 용량은 300ml입니다. 원문 확인 문구: MOON-7319",
+      "draft": null,
+      "draft_revision": 2,
+      "revision": 1,
+      "reviewed_revision": 1,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:21:02.972Z"
+      },
+      "assist_context": {
+        "references": [
+          {
+            "type": "message",
+            "id": "6b07c2a1b7cd9686e73f19d7",
+            "text": null
+          },
+          {
+            "type": "file",
+            "id": "6b07ce0bb7cd9686e73f19e1",
+            "text": null
+          },
+          {
+            "type": "product",
+            "id": "6b07cef3b7cd9686e73f19e4",
+            "text": null
+          }
+        ],
+        "scope": {
+          "kinds": [
+            "project",
+            "brand",
+            "plan",
+            "record",
+            "document",
+            "task",
+            "economics",
+            "ledger",
+            "memo",
+            "file",
+            "product",
+            "contact"
+          ],
+          "excluded": [
+            "task:6b07c399b7cd9686e73f19d9"
+          ],
+          "message_ids": []
+        },
+        "revision": 3
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19ea"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F02",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      },
+      "assist_context": {
+        "references": [],
+        "scope": {
+          "kinds": [
+            "project",
+            "brand",
+            "plan",
+            "record",
+            "document",
+            "task",
+            "economics",
+            "ledger",
+            "memo",
+            "file",
+            "product",
+            "contact"
+          ],
+          "excluded": [
+            "task:6b07c399b7cd9686e73f19d9"
+          ],
+          "message_ids": []
+        },
+        "revision": 1
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19eb"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F03",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19ec"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F04",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19ed"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F05",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19ee"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F06",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19ef"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F07",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      }
+    },
+    {
+      "_id": {
+        "$oid": "6b07cf26b7cd9686e73f19f0"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "doc_id": {
+        "$oid": "6b07cf26b7cd9686e73f19e8"
+      },
+      "section_id": "F08",
+      "text": "",
+      "draft": null,
+      "draft_revision": 0,
+      "revision": 0,
+      "reviewed_revision": null,
+      "material_ids": [],
+      "updated_at": {
+        "$date": "2026-11-26T06:18:14.812Z"
+      }
+    }
+  ],
+  "products": [
+    {
+      "_id": {
+        "$oid": "6b07cef3b7cd9686e73f19e4"
+      },
+      "name": "달빛 머그 300ml",
+      "intent": "일상에 쓰는 선물용 백자 머그",
+      "material": "백자",
+      "process": "물레 성형 후 고온 소성",
+      "photo_ids": [
+        "6b07cca1b7cd9686e73f19e0"
+      ],
+      "cost": null,
+      "sale_price": 28000,
+      "price_estimated": true,
+      "quantity_date": "2026-11-26",
+      "options": [
+        {
+          "name": "기본",
+          "size": "300ml",
+          "color": "백색",
+          "sale_price": null,
+          "initial_quantity": 10,
+          "produced_quantity": 0,
+          "sold_quantity": 0,
+          "replenishment_threshold": 2,
+          "inventory": 10
+        }
+      ],
+      "status": "registered",
+      "quantity_initialized_at": {
+        "$date": "2026-11-26T06:17:23.107Z"
+      },
+      "project_id": {
+        "$oid": "6b07c1e4b7cd9686e73f19cb"
+      },
+      "brand_id": null,
+      "updated_at": {
+        "$date": "2026-11-26T06:17:23.107Z"
+      },
+      "revision": 1,
+      "created_at": {
+        "$date": "2026-11-26T06:17:23.107Z"
+      },
+      "deleted_at": null
+    }
+  ],
+  "scope": [
+    {
+      "_id": {
+        "$oid": "6b07c252b7cd9686e73f19d2"
+      },
+      "reference_scope": {
+        "kinds": [
+          "project",
+          "brand",
+          "plan",
+          "record",
+          "document",
+          "task",
+          "economics",
+          "ledger",
+          "memo",
+          "file",
+          "product",
+          "contact"
+        ],
+        "excluded": [
+          "task:6b07c399b7cd9686e73f19d9"
+        ],
+        "message_ids": []
+      },
+      "scope_revision": 1
+    }
+  ]
+}

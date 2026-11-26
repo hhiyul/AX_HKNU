@@ -18,10 +18,23 @@ async def list_messages(db: AsyncDatabase, project_id: ObjectId, page, conversat
     비우면 프로젝트의 모든 메시지를 처음부터 준다(예전 화면과 호환)."""
     if conversation_id is None:
         cursor = db.messages.find({"project_id": project_id}).sort("ordinal", 1)
-        return await cursor.skip(page.skip).limit(page.limit).to_list()
-    cursor = db.messages.find({"project_id": project_id, "conversation_id": conversation_id}).sort("ordinal", -1)
-    newest_first = await cursor.skip(page.skip).limit(page.limit).to_list()
-    return newest_first[::-1]
+        messages = await cursor.skip(page.skip).limit(page.limit).to_list()
+    else:
+        cursor = db.messages.find({"project_id": project_id, "conversation_id": conversation_id}).sort("ordinal", -1)
+        newest_first = await cursor.skip(page.skip).limit(page.limit).to_list()
+        messages = newest_first[::-1]
+    # Restore terminal failures even when no assistant text was saved. Read only;
+    # reloading a conversation must never dispatch another paid request.
+    request_ids = [m["request_id"] for m in messages if m["role"] == "USER" and m.get("request_id")]
+    outcomes = {r["_id"]: r async for r in db.ai_runs.find({
+        "project_id": project_id, "_id": {"$in": request_ids},
+        "status": {"$in": ["failed", "unknown", "stopped"]},
+    }, {"status": 1, "delivery": 1, "error_code": 1, "user_message_id": 1})} if request_ids else {}
+    for message in messages:
+        outcome = outcomes.get(message.get("request_id"))
+        if message["role"] == "USER" and outcome and outcome.get("user_message_id") == message["_id"]:
+            message["run_outcome"] = {key: outcome.get(key) for key in ("status", "delivery", "error_code")}
+    return messages
 
 
 async def add_message(
