@@ -1,7 +1,7 @@
 // 항목형 문서 편집(프로토타입 문서 편집 틀). 목차 → 현재 항목: 질문·가이드, 본문(임시 저장·저장·검토 완료), AI 도움, 할 일 제안.
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { docs, download, errorText } from '../api/index.js'
-import { go, paths } from '../router.js'
+import { go, paths, setLeaveGuard } from '../router.js'
 import { Progress, StateBadge, TEMPLATE_NAME } from '../components/ui.jsx'
 import DocAssist from './DocAssist.jsx'
 import TaskProposals from './TaskProposals.jsx'
@@ -19,12 +19,36 @@ export default function DocEditor({ projectId, docId, sectionId }) {
   const current = doc?.sections.find((s) => s.section_id === (sectionId || doc.last_section_id)) || doc?.sections[0]
   const base = current ? (current.draft ?? current.text) : ''
   useEffect(() => { setValue(base) }, [current?.section_id, base])
+  const dirty = Boolean(current) && value !== base
+  const replace = (section) => setDoc((now) => (now
+    ? { ...now, sections: now.sections.map((s) => (s.section_id === section.section_id ? section : s)) } : now))
+
+  // 다른 항목·다른 화면으로 갈 때 쓰던 글을 임시 저장한다. 저장에 실패하면 머물지 버릴지 묻는다.
+  // 가드는 한 번만 걸고, 그때그때의 글은 ref로 읽는다.
+  const latest = useRef(null)
+  useLayoutEffect(() => { latest.current = { dirty, value, current } })
+  useEffect(() => setLeaveGuard(async () => {
+    const { dirty: unsaved, value: text, current: section } = latest.current
+    if (!unsaved) return true
+    try {
+      replace(await docs.saveDraft(projectId, docId, section.section_id, text, section.draft_revision))
+      setNotice({ ok: `「${section.title}」에 쓰던 글을 임시 저장했어요.` })
+      return true
+    } catch {
+      return window.confirm('쓰던 글을 임시 저장하지 못했어요. 저장하지 않고 이동할까요?\n(취소를 누르면 이 화면에 남아요. 이동하면 쓰던 글은 사라져요.)')
+    }
+  }), [projectId, docId]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 새로고침·창 닫기는 저장할 틈이 없으니 브라우저 확인 창을 띄운다.
+  useEffect(() => {
+    if (!dirty) return undefined
+    const warn = (event) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
 
   if (!doc || !current) {
     return <div className="workspace-page">{notice?.error ? <div className="notice error">{notice.error}</div> : <p className="muted">불러오는 중…</p>}</div>
   }
-  const dirty = value !== base
-  const replace = (section) => setDoc({ ...doc, sections: doc.sections.map((s) => (s.section_id === section.section_id ? section : s)) })
   const act = async (work, message) => {
     try {
       const section = await work()
@@ -36,11 +60,10 @@ export default function DocEditor({ projectId, docId, sectionId }) {
       load()
     }
   }
-  const select = async (id) => {
-    if (dirty && window.confirm('저장하지 않은 글이 있어요. 임시 저장하고 이동할까요?')) {
-      await docs.saveDraft(projectId, docId, current.section_id, value, current.draft_revision).catch(() => null)
-    }
-    setNotice(null)
+  // 쓰던 글은 이동할 때 가드가 임시 저장한다.
+  const select = (id) => {
+    if (id === current.section_id) return
+    if (!dirty) setNotice(null)
     go(paths.doc(projectId, docId), { s: id })
   }
   const openPreview = async () => {
