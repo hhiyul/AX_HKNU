@@ -84,6 +84,8 @@ class ProjectOut(BaseModel):
     file_refs: list[str] = []
     chip_refs: list[str] = []
     message_count: int = 0
+    # 지금 답변을 만드는 AI 실행 id. 화면이 새로고침 뒤에도 진행 중인 답변을 이어 받는 데 쓴다.
+    active_run: str | None = None
     revision: int = 1
     created_at: datetime
     updated_at: datetime
