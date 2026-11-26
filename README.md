@@ -1,8 +1,8 @@
 # AX_HKNU
 
 브랜드와 상품 기획을 AI와 함께 만들어 가는 서비스의 저장소입니다.
-지금은 **백엔드**(로그인, 브랜드, 프로젝트 작업실, 파일, 작업 조회)와 AI 채팅·문서 생성 API가 있으며, 프런트엔드는 API 확인용 임시 화면입니다.
-프로젝트 작업실은 UX Flow Atlas v0.3 기준으로 개요, 상품기획 6개 항목, 경제성, 기획 산출물, 추가 기록, AI 채팅·제안의 저장 구조와 API를 갖췄습니다.
+**백엔드**(로그인, 브랜드, 프로젝트 작업실, 파일, AI 채팅·문서 항목별 AI, 할 일, 정산)와 **UT용 화면**(React)이 있습니다.
+프로젝트 작업실에는 개요, 상품기획 6개 항목, 경제성, 산출물, AI와 함께 정리한 내용, AI 채팅(대화 여러 개), 전용 문서(펀딩 상세페이지·사업계획서), 일정, 정산 수입·지출이 있습니다.
 
 ## 한눈에 보기
 
@@ -11,7 +11,7 @@
   │  http://localhost
   ▼
 react-front (nginx)
-  ├─ /        → React 화면 (지금은 API 동작 확인용 임시 화면)
+  ├─ /        → React 화면 (UT용 화면, #/dev 는 예전 API 테스트 화면)
   └─ /api/**  → /api를 떼고 backend:8000 으로 전달
                    │
                    ▼
@@ -22,7 +22,7 @@ react-front (nginx)
 | 폴더 | 내용 |
 |---|---|
 | `backend/` | FastAPI 서버. 이 저장소의 대부분의 코드가 여기 있습니다. |
-| `front/` | React(Vite) + nginx. `src/App.jsx`는 임시 테스트 화면이라 통째로 교체할 예정입니다. |
+| `front/` | React(Vite) + nginx. 프로토타입 틀에 맞춘 UT용 화면입니다. 구조는 `front/README.md` |
 | `gate/` | Spring Cloud Gateway. **지금은 쓰지 않고** 코드만 남겨 두었습니다. |
 | `docs/` | 설계 문서와 구현 계획 |
 
@@ -33,13 +33,18 @@ Docker만 있으면 됩니다.
 1. `.env.example`을 `.env`로 복사하고 값을 채웁니다.
 
    | 변수 | 설명 |
-   |---|---|
+      |---|---|
    | `MONGO_DETAILS` | Atlas 연결 문자열. DB 이름을 빼면 `ax_platform`을 씁니다. |
    | `JWT_SECRET` | 로그인 토큰 서명 키. 비어 있으면 로그인 API가 503을 돌려줍니다. 만드는 명령은 `.env.example`에 있습니다. |
    | `COOKIE_SECURE` | HTTPS로 배포할 때만 `true` |
    | `AI_PROVIDER` | `demo`(기본, 실제 호출 없는 모의 응답) 또는 `openai`(실제 호출, 비용 발생) |
-   | `OPENAI_API_KEY` | `AI_PROVIDER=openai`일 때 쓰는 키 |
+   | `OPENAI_API_KEY` | `AI_PROVIDER=openai`일 때 쓰는 키. OpenAI 키 또는 BAZE 게이트웨이 키 |
+   | `OPENAI_BASE_URL` | OpenAI 호환 주소. 기본 `https://api.openai.com/v1`, BAZE 게이트웨이는 `https://api.baze.co/v1/gateway` |
    | `OPENAI_MODEL` | 기본 `gpt-6-luna` |
+   | `OPENAI_REASONING_EFFORT` | 추론 정도. 비우면 OpenAI는 `none`, 게이트웨이는 `low`. 게이트웨이는 `low`·`medium`·`high`만 받습니다 |
+   | `AI_READ_ATTACHMENTS` | 참고 파일(TXT·MD·DOCX) 내용을 AI가 읽을지. 기본 `false` |
+   | `AI_READ_IMAGES` | 채팅에 붙인 사진(PNG·JPEG·WebP)을 AI가 볼지. 기본 `true` (메시지당 4장, 긴 변 1568px로 줄여 보냄) |
+   | `FRONTEND_PORT`, `BACKEND_PORT` | 선택. 기본 80, 8000 |
 
 2. 컨테이너를 띄웁니다.
    ```bash
@@ -49,8 +54,8 @@ Docker만 있으면 됩니다.
 3. 접속합니다.
 
    | 주소 | 용도 |
-   |---|---|
-   | `http://localhost` | 화면 (임시 테스트 화면) |
+      |---|---|
+   | `http://localhost` | 화면 (UT용 화면). `http://localhost/#/dev`는 예전 API 테스트 화면 |
    | `http://localhost/api/...` | API. 화면이 호출하는 주소 |
    | `http://localhost:8000/docs` | Swagger. 백엔드 직접 접근이며 디버깅용. 서버 PC 안(127.0.0.1)에서만 열린다 |
 
@@ -59,7 +64,7 @@ Docker만 있으면 됩니다.
    docker compose run --rm --build backend python init_db.py
    ```
 
-> `.env`의 Atlas에 실제로 저장됩니다. 테스트 화면에서 누른 것도 그대로 쌓입니다.
+> `.env`의 Atlas에 실제로 저장됩니다. 화면에서 누른 것도 그대로 쌓입니다.
 
 코드를 고친 뒤에는 해당 서비스를 다시 빌드해야 반영됩니다.
 ```bash
@@ -86,7 +91,10 @@ users (사용자)
  │   │                                 plan 상품기획 6개 항목 · record AI와 함께 정리한 내용 · document 산출물
  │   ├─ cost_sheets                  경제성 입력값(프로젝트당 하나). 비교 결과는 조회할 때 계산한다
  │   ├─ conversations                AI 채팅 대화 목록. 대화마다 이전 대화·압축 요약이 따로다
- │   ├─ messages                     AI 채팅 메시지. 채팅은 conversation_id로 대화에 속한다(항목별 AI 메시지는 없음)
+ │   ├─ messages                     AI 메시지. 채팅은 conversation_id로 대화에 속하고, 문서 항목별 AI는 target_doc_id·target_section_id로 항목에 속한다
+ │   ├─ structured_docs              전용 문서(펀딩 상세페이지·사업계획서). 휴지통·복원
+ │   ├─ doc_sections                 전용 문서의 항목(F01~F08, B01~B08). 문서·항목마다 하나
+ │   ├─ tasks                        일정(할 일). AI 할 일 후보에서 등록하면 source_proposal_id·원래 문서 항목이 남는다
  │   ├─ ledger_entries               정산 수입·지출 내역(휴지통·복원)
  │   └─ ai_runs                      AI 채팅 실행 기록(상태, 실패 사유, 토큰 사용량). 진행 중 잠금은 projects.active_run
  ├─ assets (파일)                    brand_id, project_id 중 하나 이상
@@ -98,7 +106,17 @@ users (사용자)
 - 상품기획 항목, AI와 함께 정리한 내용, 산출물은 모두 "제목 + 내용"이라 **`items` 한 컬렉션**에 `kind`로 구분해 저장합니다. 새 종류가 생기면 컬렉션이나 API를 늘리지 않고 `kind`만 추가합니다.
 - 화면 구성과 동작은 프로토타입(https://duing.shop/AX/)을 기준으로 맞췄습니다.
 - 컬렉션의 필드 타입, 필수 여부, 인덱스는 `backend/init_db.py`가 원본입니다. 필드를 추가하면 이 파일도 같이 고쳐야 합니다.
-- `docs/superpowers/specs/2026-11-11-backend-v03-design.md`는 프로토타입에 맞추기 전(v0.3) 설계 기록입니다. 초안/확정, 이력, AI 제안, 가격 시나리오는 지금 코드에 없습니다.
+- `docs/superpowers/specs/2026-11-11-backend-v03-design.md`는 프로토타입에 맞추기 전(v0.3) 설계 기록입니다. 초안/확정, 이력, AI 제안, 가격 시나리오는 지금 코드에 없습니다. 지금 있는 "할 일 후보"(`proposals`)는 v05에서 새로 만든 것으로 v0.3의 AI 제안과 다릅니다.
+
+## AI 통합 상태
+
+`feature/backend-prototype`의 P5 엔진 이식을 반영했습니다. `main.py`는 `app/ai/` 엔진과 `services/ai_*`를 통해 인증된 프로젝트의 AI 실행을 처리하고, 대화·실행 기록·압축된 대화를 MongoDB에 저장합니다. 스트리밍, 중지, 사용량, 웹 검색, 참고 파일 읽기, 기록 검토안, 문서 초안·출처·변경 확인, TXT·MD·DOCX·PDF 내보내기를 포함합니다. 설계는 [AI 채팅 실행 설계](docs/superpowers/specs/2026-11-19-ai-chat-run-design.md)를 참고하세요.
+
+기존 `app/ai/p5/`와 `tests_unit/`는 독립 실험·회귀 검증용으로 유지합니다. P5의 SQLite 저장소는 `main.py`에서 사용하지 않으며, 이번 통합에 기존 SQLite 데이터의 MongoDB 이관 기능은 포함하지 않습니다. SSE 사건 대기열은 프로세스 메모리에 있으므로 서버 재시작 후 재생되지는 않습니다.
+
+## 명세 문서
+
+- [AI 에이전트 파이프라인 명세](docs/ai-agent-pipeline/README.md): 시스템 기능명세 → 사용자 기능명세 → 모듈 기능명세
 
 ## API
 
@@ -111,6 +129,9 @@ users (사용자)
 | 브랜드 | `GET·POST /brands`, `GET·PATCH·DELETE /brands/{id}` | 이름과 소개만으로 만들 수 있습니다 |
 | 프로젝트 | `GET·POST /projects`, `GET·PATCH·DELETE /projects/{id}` | 이름만 있으면 만들 수 있습니다. 목록은 `?brand_id=`(`none`이면 브랜드 없는 프로젝트), `?status=active\|archived\|trash`, `?q=`(이름 검색)로 거릅니다. 진행 단계·메모·보관·복원·AI 채팅 설정은 `PATCH`로 바꿉니다 |
 | 파일 | `GET·POST /assets`, `GET·DELETE /assets/{id}`, `GET /assets/{id}/file` | 목록은 `?brand_id=`나 `?project_id=` 필수. 업로드는 multipart |
+| 홈(v05) | `GET /home?brand_id=&today=` | 계정 전체(또는 브랜드)의 최근 문서·오늘 할 일·기한 지난 일·진행 중 문서·규칙 기반 추천. `today`를 비우면 한국 날짜 |
+| 전체 일정(v05) | `GET /tasks?brand_id=&from=&to=` | 진행 중인 모든 프로젝트의 일정(달력). 날짜는 `YYYY-MM-DD` |
+| 문서 틀(v05) | `GET /templates` | 전용 문서의 작성 틀과 항목 목록 |
 | AI 작업 | `GET /jobs`, `GET /jobs/{id}` | 조회만. 생성과 상태 변경은 파이프라인 담당 |
 | OpenAI | `POST /openai/test` | 키가 유효한지만 확인. 키는 저장하지 않습니다 |
 | 요청 결과 | `GET /requests/{key}` | `Idempotency-Key`로 보낸 저장 요청이 반영됐는지 확인 |
@@ -126,10 +147,11 @@ users (사용자)
 | 문서 출처 | `GET /items/document/{key}/changes` | AI가 만든 산출물이 참고한 기획 항목·정리 내용·참고 산출물·참고 파일이 그 뒤 바뀌었는지(`unchanged`·`changed`·`unavailable`) |
 | 경제성 | `GET·PUT /economics`, `POST /economics/baseline`, `POST /economics/confirm` | 입력 저장, 비교 기준 저장, 판매가 결정(`plan/ck_05`에 반영) |
 | AI 채팅 | `GET·POST /messages` | 메시지 목록과, AI 답변 없이 사용자 메시지만 저장 |
-| 전용 문서(v05) | `GET /templates`, `GET·POST /docs`, `GET·PATCH·DELETE /docs/{doc_id}`, `POST /docs/{doc_id}/restore`, `PUT·DELETE .../sections/{sid}/draft`, `PUT .../sections/{sid}`, `POST .../sections/{sid}/review`, `GET /docs/{doc_id}/preview`, `GET /docs/{doc_id}/export/{md·txt·docx·pdf}` | 펀딩 상세페이지(F01~F08, 필수 6)·사업계획서(B01~B08, 필수 8)를 항목별로 씁니다. 항목 상태는 `UNWRITTEN`·`WRITING`·`REVIEWED`, 진행도는 확인한 필수 항목 수입니다. 설계는 `docs/superpowers/specs/2026-11-24-v05-structured-docs-design.md` |
+| 대화 | `GET·POST /conversations`, `PATCH·DELETE /conversations/{cid}`, `POST /conversations/{cid}/restore` | 채팅 대화 목록, 이름 변경, 휴지통·복원. 휴지통에 있는 대화에는 보낼 수 없습니다(409 `CONVERSATION_TRASHED`) |
+| 정산 | `GET·POST /ledger`, `PATCH·DELETE /ledger/{entry_id}`, `POST /ledger/{entry_id}/restore` | 실제 수입·지출 내역. 경제성(원가·판매가 비교)과 따로입니다 |
+| 전용 문서(v05) | `GET·POST /docs`, `GET·PATCH·DELETE /docs/{doc_id}`, `POST /docs/{doc_id}/restore`, `PUT·DELETE .../sections/{sid}/draft`, `PUT .../sections/{sid}`, `POST .../sections/{sid}/review`, `GET /docs/{doc_id}/preview`, `GET /docs/{doc_id}/export/{md·txt·docx·pdf}` | 펀딩 상세페이지(F01~F08, 필수 6)·사업계획서(B01~B08, 필수 8)를 항목별로 씁니다. 항목 상태는 `UNWRITTEN`·`WRITING`·`REVIEWED`, 진행도는 확인한 필수 항목 수입니다. 설계는 `docs/superpowers/specs/2026-11-24-v05-structured-docs-design.md` |
 | 항목별 AI(v05) | `POST .../sections/{sid}/assist`, `POST .../sections/{sid}/apply`, `GET .../sections/{sid}/messages`, `POST .../sections/{sid}/task-proposals` | 고른 참고만 보내 후보(답변의 `candidate`)를 만들고, 적용하면 임시 입력에만 들어갑니다. 후보 뒤에 글이 바뀌었으면 409 `CANDIDATE_OUTDATED`. 할 일 후보는 답변의 `proposals`이고 아직 일정이 아닙니다 |
 | 할 일(v05) | `GET·POST /tasks`, `PATCH·DELETE /tasks/{task_id}`, `POST /tasks/{task_id}/restore` | 날짜 필수. 같은 AI 후보(`source_proposal_id`)는 한 번만 등록되고 다시 보내면 기존 일정(200, `existing`). `source`로 원래 문서 항목에 돌아갑니다 |
-| 홈(v05) | `GET /home?brand_id=&today=` | 계정 전체(또는 브랜드)의 최근 문서·오늘 할 일·기한 지난 일·진행 중 문서·규칙 기반 추천 |
 | AI 답변 | `POST /runs`, `GET /runs/{run_id}`, `GET /runs/{run_id}/stream?after=`, `POST /runs/{run_id}/stop` | 메시지를 보내면 실행이 시작되고(202), 진행 상황은 SSE로 받습니다. 프로젝트당 한 번에 하나(409 `RUN_ACTIVE`). 상태·스트림·중지는 휴지통에 있어도 됩니다. 본문: `text`, `mode`(`auto`·`chat`·`document`), `include_session`, `public_search_terms`, `asset_ids`(이번에 붙인 파일), `reference_document`·`reference_body`(문서 모드에서 참고할 산출물). 첨부 파일 내용은 기본으로 AI에 보내지 않습니다(`AI_READ_ATTACHMENTS=true`면 TXT·MD·DOCX를 읽음). 기록 검토안은 `record_candidate` 사건과 답변의 `record_draft`로 옵니다. 웹 검색은 프로젝트의 `search_enabled`가 켜져 있을 때만 합니다. 문서 모드에서 끝까지 만든 답변은 메시지의 `doc`에 남고 `document_candidate` 사건이 옵니다. `document_route` 사건이 오면 그때까지 받은 글을 지우세요. `include_session`을 비우면 이전 대화를 넣고 문서를 만듭니다 |
 
 요청과 응답의 정확한 필드는 Swagger(`http://localhost:8000/docs`)에서 확인하세요.
@@ -149,11 +171,17 @@ users (사용자)
 |---|---|---|
 | 401 | `UNAUTHORIZED`, `INVALID_CREDENTIALS` | 로그인 필요, 이메일·비밀번호 불일치 |
 | 404 | `NOT_FOUND`, `FILE_MISSING` | 없는 자료. **남의 자료와 잘못된 ID 형식도 404**입니다 |
+| 405 | `METHOD_NOT_ALLOWED` | 그 경로에 없는 방식(GET·POST 등) |
 | 409 | `EMAIL_TAKEN`, `BRAND_IN_USE`, `PROJECT_IN_USE`, `NOT_IN_TRASH` | 중복 가입, 지울 수 없는 상태 |
-| 409 | `PROJECT_NOT_ACTIVE` | 보관함·휴지통에 있는 프로젝트의 작업실을 열려고 함 |
+| 409 | `PROJECT_NOT_ACTIVE`, `CONVERSATION_TRASHED`, `DOC_IN_TRASH` | 보관함·휴지통에 있는 프로젝트·대화·문서에 작업하려고 함 |
 | 409 | `REVISION_CONFLICT`, `REQUEST_IN_PROGRESS` | 다른 곳에서 먼저 수정됨, 같은 요청 처리 중 |
+| 409 | `RUN_ACTIVE`, `CANDIDATE_OUTDATED`, `ASSET_LIMIT` | 이 프로젝트에서 AI 답변이 이미 진행 중, 후보를 만든 뒤 글이 바뀜, 프로젝트 파일 20개 초과 |
 | 413 | `FILE_TOO_LARGE` | 2MB 초과 |
-| 422 | `VALIDATION_ERROR`, `NAME_REQUIRED`, `INVALID_ASSET`, `LOGO_NOT_IMAGE`, `ASSET_OWNER_REQUIRED`, `AMOUNT_NOT_ALLOWED`, `NO_DRAFT`, `ITEM_LIMIT`, `COSTS_INCOMPLETE` | 입력값 문제 |
+| 422 | `VALIDATION_ERROR`, `NAME_REQUIRED`, `INVALID_ASSET`, `LOGO_NOT_IMAGE`, `ASSET_OWNER_REQUIRED`, `AMOUNT_NOT_ALLOWED`, `NO_DRAFT`, `ITEM_LIMIT`, `COSTS_INCOMPLETE`, `NO_BRAND`, `UNSUPPORTED_FORMAT` | 입력값 문제 |
+| 422 | `UNKNOWN_TEMPLATE`, `SECTION_EMPTY`, `CANDIDATE_MISMATCH`, `NOT_A_CANDIDATE`, `PROPOSAL_SOURCE_MISMATCH` | 전용 문서·항목별 AI·할 일 후보의 입력값 문제 |
+| 422 | `INVALID_REFERENCE`, `REFERENCE_REQUIRED`, `REFERENCE_REQUIRES_DOCUMENT_MODE` | AI 답변 요청의 참고 산출물 지정 문제 |
+| 429 | `LOGIN_RATE_LIMITED` | 로그인 실패가 많음(이메일 15분 10번, IP 15분 30번) |
+| 500 | `INTERNAL_ERROR` | 예상하지 못한 서버 오류 |
 | 503 | `AUTH_NOT_CONFIGURED`, `DB_NOT_CONFIGURED`, `DB_UNAVAILABLE` | `.env` 누락 또는 Atlas 연결 실패 |
 
 **버전(revision)과 동시 수정**
@@ -201,14 +229,14 @@ users (사용자)
 - 최신순이며 `?limit=`(기본 50, 최대 100)과 `?skip=`으로 나눠 받습니다.
 
 **파일**
-- TXT, MD, DOCX, PNG, JPEG, WebP만 받고 2MB까지입니다. 브랜드나 프로젝트 중 하나에는 속해야 합니다. 형식은 확장자가 아니라 **파일 내용**으로 판별합니다.
+- TXT, MD, DOCX, PNG, JPEG, WebP만 받고 2MB까지, 프로젝트당 20개까지입니다. 브랜드나 프로젝트 중 하나에는 속해야 합니다. 형식은 확장자가 아니라 **파일 내용**으로 판별합니다.
 - `asset_type`이 `logo`, `banner`, `product_image`면 이미지만 올릴 수 있습니다. `document`는 전부 됩니다.
 - 브랜드 로고는 파일을 올린 뒤 `PATCH /brands/{id}`에 `logo_asset_id`를 보내 지정합니다. 이미지만 됩니다.
 - 응답의 `file_url`은 `/assets/{id}/file`입니다. 화면에서는 앞에 `/api`를 붙여 씁니다.
 
 **삭제**
 - 브랜드를 지워도 연결된 프로젝트는 지워지지 않고 "브랜드 없음"으로 남습니다. 브랜드에만 속한 파일(로고 등)은 함께 지워집니다.
-- **프로젝트 `DELETE`는 휴지통으로 옮기는 것**이고 자료는 그대로 남아 복원할 수 있습니다. `DELETE ...?permanent=true`는 휴지통에 있는 프로젝트를 딸린 자료(글, 경제성, 채팅)까지 완전히 지웁니다. 이때 프로젝트에만 속한 파일은 지워지고, 브랜드에도 속한 파일은 연결만 풀립니다.
+- **프로젝트 `DELETE`는 휴지통으로 옮기는 것**이고 자료는 그대로 남아 복원할 수 있습니다. `DELETE ...?permanent=true`는 휴지통에 있는 프로젝트를 딸린 자료(글, 경제성, 대화·메시지, AI 실행 기록, 전용 문서·항목, 일정, 정산 내역)까지 완전히 지웁니다. 이때 프로젝트에만 속한 파일은 지워지고, 브랜드에도 속한 파일은 연결만 풀립니다.
 - 진행 중(`queued`, `running`)인 AI 작업이 있으면 브랜드 삭제와 프로젝트 완전 삭제가 막힙니다. 끝난 작업 기록은 함께 지워집니다.
 - 파일을 지우면 그 파일을 로고로 쓰던 브랜드의 `logo_asset_id`가 비워지고, 프로젝트의 참고 파일 목록(`file_refs`)에서도 빠집니다.
 
@@ -226,11 +254,15 @@ backend/
 │  ├─ storage.py      업로드 파일 저장. 저장소를 바꿀 때는 이 파일만 고칩니다
 │  ├─ routers/        경로 정의. 로직 없이 services를 부릅니다
 │  ├─ schemas/        요청·응답 모델 (Pydantic)
+│  ├─ ai/             AI 엔진: 공급자(demo·openai), 실행 관리, 맥락 조립, 진행 사건, 사용량, 웹 검색 규칙
 │  └─ services/       실제 로직
 │     ├─ store.py       공통 도우미: 내 자료 확인, revision 조건부 저장, 최근 작업 기록, 중복 요청 방지
 │     ├─ items.py       글(기획 항목·AI 정리 내용·산출물). 종류별 규칙은 RULES에 있습니다
-│     ├─ economics.py, chat.py, overview.py
-│     └─ auth.py, brands.py, projects.py, assets.py
+│     ├─ ai_runs.py, ai_chat.py, ai_context.py, ai_tools.py, ai_images.py, ai_workspace.py   AI 답변 실행
+│     ├─ structured_docs.py, templates.py, doc_assist.py, task_proposals.py, doc_sources.py   전용 문서·항목별 AI
+│     ├─ tasks.py, home.py, ledger.py, conversations.py
+│     ├─ economics.py, chat.py, overview.py, exports.py
+│     └─ auth.py, rate_limit.py, brands.py, projects.py, assets.py
 └─ tests/             API 단위로 검증하는 테스트
 ```
 
@@ -242,20 +274,18 @@ backend/
 5. 새 컬렉션이나 필드는 `init_db.py`에 추가하고 `python init_db.py`(위 "실행" 4번)로 Atlas에 적용합니다.
 6. `tests/`에 테스트를 추가합니다.
 
-## AI 통합 상태
+## AI 채팅
 
-`feature/backend-prototype`의 P5 엔진 이식을 반영했습니다. `main.py`는 `app/ai/` 엔진과 `services/ai_*`를 통해 인증된 프로젝트의 AI 실행을 처리하고, 대화·실행 기록·압축된 대화를 MongoDB에 저장합니다. 스트리밍, 중지, 사용량, 웹 검색, 참고 파일 읽기, 기록 검토안, 문서 초안·출처·변경 확인, TXT·MD·DOCX·PDF 내보내기를 포함합니다. 설계는 [AI 채팅 실행 설계](docs/superpowers/specs/2026-11-19-ai-chat-run-design.md)를 참고하세요.
-
-기존 `app/ai/p5/`와 `tests_unit/`는 독립 실험·회귀 검증용으로 유지합니다. P5의 SQLite 저장소는 `main.py`에서 사용하지 않으며, 이번 통합에 기존 SQLite 데이터의 MongoDB 이관 기능은 포함하지 않습니다. SSE 사건 대기열은 프로세스 메모리에 있으므로 서버 재시작 후 재생되지는 않습니다.
+조원 파이프라인의 엔진을 `app/ai/`로 옮겨 붙였습니다. 설계는 `docs/superpowers/specs/2026-11-19-ai-chat-run-design.md`.
+- 채팅 답변(스트리밍, 긴 대화 압축, 기획 항목·참고 프로젝트 읽기, 중지, 사용량), 웹 검색
+- 문서 초안과 TXT·MD·DOCX·PDF 내보내기, 기존 산출물 참고, 문서 출처·변경 확인
+- 참고 파일 읽기(설정으로 켬), 채팅 사진 보기, 기록 검토안
+- 전용 문서의 항목별 AI 도움과 할 일 후보(v05)
 
 ## 아직 없는 것
 
-- **다음 작업 제안**: 프로젝트의 `next_action`을 AI가 채우는 기능.
-- **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·프로젝트당 20개·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
+- **다음에 해야 할 일(`next_action`)**: 자리만 있고 아직 채우지 않습니다.
+- **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
 - **`ai_jobs.job_type`**: 작업이 다루는 기획 항목 `ck_01`~`ck_06` 중 하나입니다. `brand_id`는 선택이라 브랜드 없는 프로젝트의 작업도 만들 수 있습니다. 6개에 들지 않는 작업(`others`와 상세 문자열)은 아직 정하지 않았습니다.
-- **실제 화면**: `front/src/App.jsx`는 임시입니다.
+- **정식 화면**: 지금 화면은 UT용입니다.
 - **배포 준비**: HTTPS(`COOKIE_SECURE=true`), 큰 파일 업로드 방식. 로그인 실패 제한(이메일 15분 10번·IP 15분 30번, 서버 메모리)과 백엔드 8000 포트 127.0.0.1 묶기는 해 두었다.
-
-## 명세 문서
-
-- [AI 에이전트 파이프라인 명세](docs/ai-agent-pipeline/README.md): 시스템 기능명세 → 사용자 기능명세 → 모듈 기능명세
