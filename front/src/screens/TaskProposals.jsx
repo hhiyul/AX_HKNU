@@ -1,5 +1,5 @@
 // 할 일 제안: AI 후보는 아직 일정이 아니다. 날짜를 확인하고 등록한 것만 일정이 된다.
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { docs, errorText, tasks } from '../api/index.js'
 import { followRun } from '../api/stream.js'
 import { go, paths } from '../router.js'
@@ -10,11 +10,17 @@ export default function TaskProposals({ projectId, docId, section }) {
   const [proposals, setProposals] = useState([])
   const [dates, setDates] = useState({})
   const [running, setRunning] = useState(false)
+  // 등록 요청 중인 후보. 연달아 눌러 요청이 겹치지 않게 막는다.
+  const [registering, setRegistering] = useState(() => new Set())
+  const busy = useRef(new Set())
   const [error, setError] = useState('')
+  // 늦게 도착한 이전 목록이 최신 목록(등록됨 표시)을 덮지 않게 마지막 요청만 반영한다.
+  const loadSeq = useRef(0)
 
   const load = useCallback(async () => {
-    const history = await docs.sectionMessages(projectId, docId, section.section_id).catch(() => [])
-    setProposals(history.flatMap((m) => m.proposals || []))
+    const seq = ++loadSeq.current
+    const history = await docs.sectionMessages(projectId, docId, section.section_id).catch(() => null)
+    if (history && seq === loadSeq.current) setProposals(history.flatMap((m) => m.proposals || []))
   }, [projectId, docId, section.section_id])
   useEffect(() => { load(); setError('') }, [load])
 
@@ -38,12 +44,20 @@ export default function TaskProposals({ projectId, docId, section }) {
   const register = async (proposal) => {
     const date = dates[proposal.proposal_id] || proposal.suggested_date
     if (!date) { setError('날짜를 골라 주세요.'); return }
+    const id = proposal.proposal_id
+    // 같은 화면 갱신 안에서 두 번 눌리면 state가 아직 안 바뀌었으니 ref로 바로 막는다.
+    if (busy.current.has(id)) return
+    busy.current.add(id)
+    setRegistering((now) => new Set(now).add(id))
     try {
-      await tasks.create(projectId, { title: proposal.title, date, note: proposal.note || '', source_proposal_id: proposal.proposal_id })
+      await tasks.create(projectId, { title: proposal.title, date, note: proposal.note || '', source_proposal_id: id })
       setError('')
-      load()
+      await load()
     } catch (err) {
       setError(errorText(err))
+    } finally {
+      busy.current.delete(id)
+      setRegistering((now) => { const next = new Set(now); next.delete(id); return next })
     }
   }
 
@@ -74,7 +88,9 @@ export default function TaskProposals({ projectId, docId, section }) {
               <div className="proposal-actions">
                 <input type="date" min={today()} value={dates[p.proposal_id] || p.suggested_date || ''} aria-label={`${p.title} 날짜`}
                   onChange={(e) => setDates({ ...dates, [p.proposal_id]: e.target.value })} />
-                <button type="button" className="primary small" onClick={() => register(p)}>일정 등록</button>
+                <button type="button" className="primary small" disabled={registering.has(p.proposal_id)} onClick={() => register(p)}>
+                  {registering.has(p.proposal_id) ? '등록 중…' : '일정 등록'}
+                </button>
               </div>
             )}
           </div>
