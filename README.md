@@ -4,19 +4,33 @@
 **백엔드**(로그인, 브랜드, 프로젝트 작업실, 파일, AI 채팅·문서 항목별 AI, 할 일, 정산)와 **UT용 화면**(React)이 있습니다.
 프로젝트 작업실에는 개요, 상품기획 6개 항목, 경제성, 산출물, AI와 함께 정리한 내용, AI 채팅(대화 여러 개), 전용 문서(펀딩 상세페이지·사업계획서), 일정, 정산 수입·지출이 있습니다.
 
+> [!WARNING]
+> **현재 작동중인 화면은 UT용 화면으로 추후 최종본에서는 수정이 될 수도 있습니다.**
+
 ## 한눈에 보기
 
 ```
-브라우저
-  │  http://localhost
-  ▼
-react-front (nginx)
-  ├─ /        → React 화면 (UT용 화면, #/dev 는 예전 API 테스트 화면)
-  └─ /api/**  → /api를 떼고 backend:8000 으로 전달
-                   │
-                   ▼
-              backend (FastAPI) ──→ MongoDB Atlas
-                   └─ 업로드 파일은 Docker 볼륨(backend_uploads)
+[배포]  main에 push
+          │
+          ▼
+        GitHub Actions (deploy.yml)
+          │  EC2 안의 self-hosted 러너가 ~/AX_HKNU 를 최신으로 맞추고
+          │  docker compose up -d --build
+          ▼
+[서버]  EC2 (docker compose)
+          │
+브라우저 ─┤ http://32.237.0.39/   (80번 포트)
+          ▼
+        react-front (nginx)
+          ├─ /        → React 화면 (UT용 화면, #/dev 는 예전 API 테스트 화면)
+          └─ /api/**  → /api를 떼고 backend:8000 으로 전달
+                        (AI 답변 스트림 /runs/*/stream 은 버퍼 없이, 최대 1시간 유지)
+                           │
+                           ▼
+        backend (FastAPI)   서버 안에서만 127.0.0.1:8000 (Swagger)
+          ├─→ MongoDB Atlas
+          ├─→ OpenAI 또는 BAZE 게이트웨이 (AI_PROVIDER=openai 일 때만)
+          └─  업로드 파일은 Docker 볼륨(backend_uploads)
 ```
 
 | 폴더 | 내용 |
@@ -25,6 +39,9 @@ react-front (nginx)
 | `front/` | React(Vite) + nginx. 프로토타입 틀에 맞춘 UT용 화면입니다. 구조는 `front/README.md` |
 | `gate/` | Spring Cloud Gateway. **지금은 쓰지 않고** 코드만 남겨 두었습니다. |
 | `docs/` | 설계 문서와 구현 계획 |
+
+> [!IMPORTANT]
+> **`gate/`폴더는 지금은 쓰지 않고 코드만 남아 있는 상태**
 
 ## 실행
 
@@ -63,6 +80,9 @@ Docker만 있으면 됩니다.
    ```bash
    docker compose run --rm --build backend python init_db.py
    ```
+> [!WARNING]
+> **이미 만들어져 있다가 더이상 사용을 안하는 인덱스는 DB에 직접 접속해 삭제해야함**
+
 
 > `.env`의 Atlas에 실제로 저장됩니다. 화면에서 누른 것도 그대로 쌓입니다.
 
@@ -282,10 +302,17 @@ backend/
 - 참고 파일 읽기(설정으로 켬), 채팅 사진 보기, 기록 검토안
 - 전용 문서의 항목별 AI 도움과 할 일 후보(v05)
 
+> [!IMPORTANT]
+> **현재는 사용자의 API키 입력이 아닌 백엔드에서 직접 Multi AI의 api를 연결해서 사용중**
+
+
 ## 아직 없는 것
 
 - **다음에 해야 할 일(`next_action`)**: 자리만 있고 아직 채우지 않습니다.
 - **프로토타입에 있지만 아직 안 만든 것**: 가입 이메일 인증과 비밀번호 재설정, 참고 자료의 사진/견적서 구분과 20MB·PDF/GIF/HEIC 등 형식(지금은 2MB, 기존 형식 그대로), 전체 작업 백업. 작성 중인 새 프로젝트 마법사 임시 저장은 화면에서 보관합니다.
-- **`ai_jobs.job_type`**: 작업이 다루는 기획 항목 `ck_01`~`ck_06` 중 하나입니다. `brand_id`는 선택이라 브랜드 없는 프로젝트의 작업도 만들 수 있습니다. 6개에 들지 않는 작업(`others`와 상세 문자열)은 아직 정하지 않았습니다.
-- **정식 화면**: 지금 화면은 UT용입니다.
+- **`ai_jobs.job_type`**: 작업이 다루는 기획 항목 `ck_01`~`ck_06` 중 하나입니다. `brand_id`는 선택이라 브랜드 없는 프로젝트의 작업도 만들 수 있습니다. 6개에 들지 않는 작업(`others`와 상세 문자열)은 아직 정하지 않았습니다. (추가 안할수도 있음)
 - **배포 준비**: HTTPS(`COOKIE_SECURE=true`), 큰 파일 업로드 방식. 로그인 실패 제한(이메일 15분 10번·IP 15분 30번, 서버 메모리)과 백엔드 8000 포트 127.0.0.1 묶기는 해 두었다.
+
+---
+
+<p align="right"><sub>최종 수정: 2026-11-26</sub></p>
