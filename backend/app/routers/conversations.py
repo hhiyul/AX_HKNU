@@ -5,8 +5,20 @@ from app.deps import Workspace
 from app.schemas import conversations as schema
 from app.schemas.common import to_api
 from app.services import conversations
+from app.schemas.ai_scope import ScopeSave
+from app.services import reference_scope
 
 router = APIRouter(prefix="/projects/{project_id}/conversations", tags=["chat"])
+
+
+@router.get("/{conversation_id}/scope")
+async def get_scope(conversation_id: str, ws: Workspace = Depends()):
+    return await reference_scope.get(ws.db, ws.project_id, conversation_id)
+
+
+@router.put("/{conversation_id}/scope")
+async def save_scope(conversation_id: str, body: ScopeSave, ws: Workspace = Depends()):
+    return await reference_scope.save(ws.db, ws.project_id, conversation_id, body)
 
 
 @router.get("", response_model=list[schema.ConversationOut])

@@ -149,6 +149,11 @@ class MessageOut(BaseModel):
     candidate: dict[str, Any] | None = None
     # 할 일 후보 [{proposal_id, title, suggested_date, note, task_id, task_status}]. 등록했으면 task_id가 있다
     proposals: list[dict[str, Any]] | None = None
+    source_keys: list[str] = []
+    source_manifest: list[dict[str, Any]] = []
+    assist_action: str | None = None
+    checked_revision: int | None = None
+    continuation_of: str | None = None
     # 이 답변에서 저장한 정리 내용과 산출물. 저장하지 않았으면 null.
     record_key: str | None = None
     doc_key: str | None = None

@@ -100,9 +100,9 @@ async def test_chat_photo_is_sent_to_the_ai(ctx, use_runtime):
     assert image["type"] == "input_image" and image["image_url"].startswith("data:image/jpeg;base64,")
     with Image.open(io.BytesIO(base64.b64decode(image["image_url"].split(",", 1)[1]))) as sent:
         assert max(sent.size) == ai_images.MAX_SIDE
-    # 글 파일 읽기는 꺼져 있으니 견적 메모는 이름만 알린다. 사진은 봤으니 '읽지 않음'에 넣지 않는다.
+    # GD-048: 명시한 글 파일은 기본으로 원문을 읽는다. 사진은 이미지로 읽었으므로 미독 목록에서 뺀다.
     prefix = provider.calls[0]["input"][1]["content"]
-    assert '"files": ["견적.txt"]' in prefix and "팔찌.png" not in prefix
+    assert '은 체인 2,800원' in prefix and "팔찌.png" not in prefix and 'attachments_not_read' not in prefix
 
 
 async def test_photos_can_be_turned_off(ctx, use_runtime, monkeypatch):

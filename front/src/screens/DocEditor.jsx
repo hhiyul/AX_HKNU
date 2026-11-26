@@ -11,6 +11,7 @@ export default function DocEditor({ projectId, docId, sectionId }) {
   const [value, setValue] = useState('')
   const [notice, setNotice] = useState(null)
   const [preview, setPreview] = useState(null)
+  const [inspection, setInspection] = useState(null)
 
   const load = useCallback(() => docs.get(projectId, docId).then(setDoc).catch((err) => setNotice({ error: errorText(err) })),
     [projectId, docId])
@@ -83,6 +84,7 @@ export default function DocEditor({ projectId, docId, sectionId }) {
           <div className="row wrap">
             <button type="button" className="small" onClick={() => go(paths.docs(projectId))}>← 저장함</button>
             <button type="button" className="small" onClick={openPreview}>미리보기</button>
+            <button type="button" className="small" onClick={() => docs.inspect(projectId, docId).then(setInspection).catch((e) => setNotice({ error: errorText(e) }))}>저장본 기본 검사</button>
             <button type="button" className="small" onClick={() => save('pdf')}>PDF</button>
             <button type="button" className="small" onClick={() => save('docx')}>DOCX</button>
           </div>
@@ -95,6 +97,12 @@ export default function DocEditor({ projectId, docId, sectionId }) {
             </button>
           ))}
         </nav>
+        {doc.origin_conversation_id && <button type="button" onClick={() => go(paths.chat(projectId), { c: doc.origin_conversation_id })}>원 대화 열기</button>}
+        {inspection && <section className="card"><div className="row between"><h2>저장본 기본 검사</h2><button type="button" onClick={() => setInspection(null)}>닫기</button></div>
+          <p>AI 호출 없이 저장된 항목을 검사했습니다. 검토 완료 표시는 별도입니다.</p>
+          {inspection.issues.map((issue, i) => <p key={i}>{issue.section_id && <button type="button" onClick={() => select(issue.section_id)}>{doc.sections.find((s) => s.section_id === issue.section_id)?.title}</button>} {issue.message}</p>)}
+          {!inspection.issues.length && <p>기본 규칙에서 발견한 항목이 없습니다.</p>}<p className="muted small">{inspection.limits}</p>
+        </section>}
 
         <section className="editor-paper">
           <div className="row between">
@@ -122,10 +130,11 @@ export default function DocEditor({ projectId, docId, sectionId }) {
         </section>
 
         <div className="gap" />
-        <DocAssist projectId={projectId} doc={doc} section={current}
+        <DocAssist key={`${doc.id}:${current.section_id}`} projectId={projectId} doc={doc} section={current} currentText={value}
+          beforeRequest={async () => { if (!dirty) return current; const saved = await docs.saveDraft(projectId, docId, current.section_id, value, current.draft_revision); replace(saved); return saved }}
           onApplied={(section) => { replace(section); setNotice({ ok: 'AI 후보를 임시 입력에 넣었어요. 확인 후 저장해 주세요.' }); load() }} />
         <div className="gap" />
-        <TaskProposals projectId={projectId} docId={docId} section={current} />
+        <TaskProposals key={current.section_id} projectId={projectId} docId={docId} section={current} purposeIds={doc.purpose_ids?.length ? doc.purpose_ids : [doc.template_id]} />
 
         {preview && (
           <>

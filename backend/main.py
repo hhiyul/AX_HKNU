@@ -13,6 +13,8 @@ from app.routers import (
     assets, auth, brands, conversations, docs, home, jobs, ledger, openai_test, profile, projects, runs, tasks, workspace,
 )
 from app.services import ai_runs
+from app.routers import ai_sources
+from app.routers import catalog
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +45,7 @@ async def ensure_indexes() -> None:
         return
     try:
         db = get_db()
-        for name in ("tasks", "doc_sections", "structured_docs"):
+        for name in ("tasks", "doc_sections", "structured_docs", "products", "contacts", "task_registrations"):
             for keys, options in init_db.INDEXES[name]:
                 await db[name].create_index(keys, **options)
     except Exception:
@@ -61,6 +63,8 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(ai_sources.router)
+app.include_router(catalog.router)
 register_error_handlers(app)
 app.include_router(auth.router)
 app.include_router(profile.router)

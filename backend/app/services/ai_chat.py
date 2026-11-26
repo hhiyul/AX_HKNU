@@ -14,6 +14,7 @@ import re
 import time
 
 from bson import ObjectId
+from app.services.store import parse_object_id
 from pymongo.asynchronous.database import AsyncDatabase
 
 from app.ai.context import (
@@ -102,7 +103,7 @@ async def start_run(
     db: AsyncDatabase, runtime: Runtime, user_id: ObjectId, project: dict, text: str,
     public_search_terms: str = "", mode: str = "auto", include_session: bool | None = None,
     asset_ids: list[str] | None = None, reference_document: str | None = None, reference_body: str | None = None,
-    conversation_id: str | None = None,
+    conversation_id: str | None = None, continuation_of: str | None = None,
 ) -> ObjectId:
     """프로젝트를 잠그고 사용자 메시지를 저장한 뒤 백그라운드 실행을 시작한다.
 
@@ -113,14 +114,37 @@ async def start_run(
     project_id = project["_id"]
     reference = await _reference(db, project_id, mode, reference_document, reference_body)
     conversation = await conversations.resolve(db, user_id, project_id, conversation_id)
+    from app.services import reference_scope
+    scope_state = await reference_scope.get(db, project_id, str(conversation))
+    continuation = None
+    if continuation_of:
+        from app.services.source_reader import SourceReader
+        prior = await db.messages.find_one({"_id": parse_object_id(continuation_of), "project_id": project_id,
+                                           "conversation_id": conversation, "role": "ASSISTANT", "completion": "PARTIAL"})
+        prior_run = await db.ai_runs.find_one({"_id": prior.get("request_id")}) if prior else None
+        if not prior_run or prior_run["status"] not in ("stopped", "failed"):
+            raise AppError(409, "CONTINUATION_NOT_READY", "부분 답변과 이전 실행의 종료 상태를 먼저 확인해 주세요.")
+        original = await db.messages.find_one({"_id": prior_run["user_message_id"], "project_id": project_id})
+        reader = SourceReader(db, project, user_id, scope_state["scope"])
+        if "source_keys" not in prior or not all([await reader.available(key) for key in prior["source_keys"]]):
+            raise AppError(422, "CONTINUATION_SCOPE_CHANGED", "부분 답변의 출처가 현재 범위에 없습니다. 사용할 내용을 골라 새 요청을 보내 주세요.")
+        continuation = {"message_id": prior["_id"], "original_request": original["content"], "partial": prior["content"], "source_keys": prior["source_keys"]}
+        text = "이어서 생성"
 
     def make_job(run_id: ObjectId, message: dict) -> "_RunJob":
-        return _RunJob(
+        job = _RunJob(
             db, runtime, user_id, project_id, run_id, message["_id"], text, public_search_terms, mode,
             include_session, message["asset_ids"], reference, conversation,
         )
+        job.scope = scope_state["scope"]
+        job.scope_revision = scope_state["revision"]
+        job.continuation = continuation
+        return job
 
-    return await launch(db, runtime, user_id, project_id, text, make_job, asset_ids=asset_ids, conversation_id=conversation)
+    return await launch(db, runtime, user_id, project_id, text, make_job, asset_ids=asset_ids,
+                        extra={"reference_scope": scope_state["scope"], "scope_revision": scope_state["revision"],
+                               "continuation_of": continuation["message_id"] if continuation else None},
+                        conversation_id=conversation)
 
 
 async def launch(
@@ -130,7 +154,7 @@ async def launch(
     """프로젝트를 잠그고 사용자 메시지를 남긴 뒤 make_job(run_id, message)이 만든 실행을 뒤에서 돌린다."""
     run_id = await ai_runs.begin_run(db, user_id, project_id)
     try:
-        message_extra = {**(extra or {}), "request_id": run_id} if extra is not None else None
+        message_extra = {**(extra or {}), "request_id": run_id, "source_keys": [f"file:{ident}" for ident in (asset_ids or [])]}
         message = await chat.add_message(
             db, user_id, project_id, "USER", text, asset_ids, extra=message_extra, conversation_id=conversation_id
         )
@@ -282,6 +306,11 @@ class _RunJob:
         self.conversation_id = conversation_id
         self.reference = reference
         self.sources: list[dict] = []
+        from app.services import reference_scope
+        self.scope = reference_scope.normalize(None)
+        self.scope_revision = 0
+        self.source_manifest: list[dict] = []
+        self.history_source_keys: set[str] = set()
         self.asset_ids = list(asset_ids or [])
         # 이번 질문에 붙인 사진을 AI 이미지 입력으로 바꾼 것(설정이 켜져 있을 때)
         self.images: list[dict] = []
@@ -365,34 +394,57 @@ class _RunJob:
             )
 
         prefix = ai_context.prefix_from(sections) + self.toolbox.extra_prefix
+        continuation = getattr(self, "continuation", None)
+        request = self.text
+        if continuation:
+            prefix.append({"key": "continuation", "original_request": continuation["original_request"], "accepted_partial": continuation["partial"]})
+            request = "Continue only the remaining work of original_request after accepted_partial. Do not repeat or rewrite accepted_partial. Use the current allowed references."
         prepared = await prepare(
-            self.provider, prefix, history, self.text, self.toolbox.tools,
+            self.provider, prefix, history, request, self.toolbox.tools,
             self.emit, self.runtime.model, self.budget, save_summary, self.document_mode, tail, self._observe_count,
             self.images,
         )
         return prepared, _apply_prepared_history(history, prepared)
 
     async def _generate(self) -> None:
+        from app.services import reference_scope
         project = await self.db.projects.find_one({"_id": self.project_id})
         sections = await ai_context.build_sections(self.db, project, self.user_id)
         files, seen = {}, []
-        if get_settings().ai_read_images and self.asset_ids:
-            self.images, seen = await ai_images.image_inputs(self.db, self.user_id, self.asset_ids)
+        permitted_assets = [ident for ident in self.asset_ids if reference_scope.allows(self.scope, f"file:{ident}")]
+        if get_settings().ai_read_images and permitted_assets:
+            self.images, seen = await ai_images.image_inputs(self.db, self.user_id, permitted_assets)
         if get_settings().ai_read_attachments:
-            files = await ai_context.file_sections(self.db, project, self.user_id, self.asset_ids)
+            permitted_project = {**project, "file_refs": [ident for ident in project.get("file_refs", []) if reference_scope.allows(self.scope, f"file:{ident}")]}
+            files = await ai_context.file_sections(self.db, permitted_project, self.user_id, permitted_assets)
         # 보지도 읽지도 않은 첨부(글 파일 읽기가 꺼져 있을 때의 문서, 장수를 넘긴 사진)는 이름만 알린다.
-        unread = [ident for ident in self.asset_ids if ident not in seen]
-        if unread and not get_settings().ai_read_attachments:
+        for ident in seen:
+            files.pop(f"file:{ident}", None)  # Already sent as an image, not an unread text file.
+        unread = [ident for ident in permitted_assets if ident not in seen and files.get(f"file:{ident}", {}).get("read_status") not in ("read", "partial")]
+        if unread:
             sections["attachments_not_read"] = await _unread_note(self.db, unread)
         sections.update(files)
         if self.reference:
             sections["reference_document"] = self.reference
+        sections = reference_scope.filter_sections(sections, self.scope)
+        self.source_manifest = reference_scope.manifest(sections)
+        self.source_manifest += [{"key": f"file:{ident}", "kind": "file", "title": "첨부 이미지", "status": "read"} for ident in seen]
+        from app.services.source_reader import SourceReader
+        reader = SourceReader(self.db, project, self.user_id, self.scope, self.source_manifest)
+        for key in list(sections):
+            if key.startswith("record:") and not await reader.available(key):
+                sections.pop(key)
+                self.source_manifest[:] = [s for s in self.source_manifest if s["key"] != key]
+        selected = await reader.selected_messages()
+        sections.update(selected)
+        self.source_manifest.extend(reference_scope.manifest(selected))
         self.sections = sections
-        self.source_ids = [ObjectId(key.split(":", 1)[1]) for key in files]
+        self.source_ids = [ObjectId(key.split(":", 1)[1]) for key in sections if key.startswith("file:")]
         active = await ai_context.active_file_ids(self.db, project, self.user_id, self.source_ids)
         history, self.capsule_revision = await ai_context.load_history(
-            self.db, self.project_id, self.user_message_id, active, self.conversation_id
+            self.db, self.project_id, self.user_message_id, active, self.conversation_id, self.scope
         )
+        self.history_source_keys = {key for item in history for key in item.get("source_ids", []) if ":" in key or not ObjectId.is_valid(key)}
         await self.emit("context_ready", "프로젝트 자료와 이전 대화를 확인했습니다.")
         self.document_mode = self.mode == "document" or (
             self.mode == "auto" and ai_tools.is_document_request(self.text)
@@ -401,10 +453,13 @@ class _RunJob:
         provider = self.runtime.provider
         supports = getattr(provider, "supports_web_search", hasattr(provider, "web_search"))
         can_search = bool(project.get("search_enabled")) and supports
+        from app.services.source_reader import SourceReader
         self.toolbox = ai_tools.ToolBox(
             self.emit, self.provider, sections, can_search, self.public_search_terms, self._search_allowed,
             route_offered=self.mode == "auto" and not self.document_mode and not self.search_only,
             record_offered=not self.document_mode,
+            source_reader=reader,
+            task_offered=not self.document_mode,
         )
         if self.document_mode:
             history = self._document_history(history)
@@ -468,9 +523,10 @@ class _RunJob:
         except (TypeError, ValueError):
             raise ContextError("INVALID_TOOL_ARGUMENTS") from None
         self.document_mode, self.pieces = True, []
-        self.toolbox.remove({"route_document", "propose_record"})
+        self.toolbox.remove({"route_document", "propose_record", "suggest_tasks"})
         # 문서 답변에는 기록 검토안을 붙이지 않는다.
         self.toolbox.record_draft = None
+        self.toolbox.proposals = []
         await self.emit("document_route", "문서 작성 작업으로 전달했습니다.")
         return self._document_history(history), _search_turns(tail)
 
@@ -491,10 +547,14 @@ class _RunJob:
         if self.document_mode and completion == "COMPLETE":
             web_urls = self.toolbox.web_urls if self.toolbox else []
             doc = {"title": _doc_title(text), "content": text, "sources": doc_sources.collect(self.sections, web_urls)}
+        source_keys = sorted(self.history_source_keys | {entry["key"] for entry in self.source_manifest})
+        provenance = {"source_keys": source_keys, "source_manifest": self.source_manifest,
+                      "reference_scope": self.scope, "scope_revision": self.scope_revision, "request_id": self.run_id,
+                      "continuation_of": (getattr(self, "continuation", None) or {}).get("message_id")}
         message = await chat.add_message(
             self.db, self.user_id, self.project_id, "ASSISTANT", text, completion=completion, doc=doc,
             source_ids=self.source_ids, record_draft=self.toolbox.record_draft if self.toolbox else None,
-            extra=self._message_extra(text, completion), conversation_id=self.conversation_id,
+            extra={**provenance, **(self._message_extra(text, completion) or {})}, conversation_id=self.conversation_id,
         )
         self.assistant_message_id = message["_id"]
         await self._after_save(message)
@@ -502,7 +562,7 @@ class _RunJob:
 
     def _message_extra(self, text: str, completion: str) -> dict | None:
         """답변 메시지에 더 붙일 필드. 항목별 AI·할 일 제안 실행이 쓴다."""
-        return None
+        return {"proposals": self.toolbox.proposals if self.toolbox and completion == "COMPLETE" else []}
 
     async def _after_save(self, message: dict) -> None:
         if message.get("doc"):

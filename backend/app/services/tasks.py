@@ -42,7 +42,7 @@ async def _check_source(db, project_id: ObjectId, doc_id: str | None, section_id
         if section_id:
             raise not_found()
         return None
-    doc = await db.structured_docs.find_one({"_id": parse_object_id(doc_id), "project_id": project_id})
+    doc = await db.structured_docs.find_one({"_id": parse_object_id(doc_id), "project_id": project_id, "deleted_at": None})
     if doc is None:
         raise not_found()
     if section_id and templates.get(doc["template_id"], doc["template_version"]).section(section_id) is None:
@@ -54,9 +54,13 @@ async def _proposal_source(db, project_id: ObjectId, body) -> tuple[ObjectId, st
     """제안의 문서·항목을 쓴다. 화면이 다른 문서·항목을 보내면 422."""
     ident = parse_object_id(body.source_proposal_id)
     message = await db.messages.find_one(
-        {"project_id": project_id, "proposals.proposal_id": ident}, {"target_doc_id": 1, "target_section_id": 1}
+        {"project_id": project_id, "proposals.proposal_id": ident}
     )
     if message is None:
+        raise not_found()
+    if message.get("completion", "COMPLETE") != "COMPLETE":
+        raise AppError(422, "INCOMPLETE_PROPOSAL", "완료된 요청의 후보만 등록할 수 있습니다.")
+    if message.get("conversation_id") and not await db.conversations.find_one({"_id": message["conversation_id"], "project_id": project_id, "deleted_at": None}):
         raise not_found()
     doc_id = str(message["target_doc_id"]) if message.get("target_doc_id") else None
     section_id = message.get("target_section_id")
@@ -70,8 +74,17 @@ async def create_task(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId
     """(일정, 새로 만들었는지). 같은 제안으로 다시 등록하면 기존 일정을 그대로 돌려준다."""
     proposal_id, source_doc, source_section = None, body.source_doc_id, body.source_section_id
     if body.source_proposal_id:
+        existing = await db.tasks.find_one({"user_id": user_id, "project_id": project_id, "source_proposal_id": parse_object_id(body.source_proposal_id)})
+        if existing:
+            return await task_view(db, existing, existing=True), False
         proposal_id, source_doc, source_section = await _proposal_source(db, project_id, body)
     doc_id = await _check_source(db, project_id, source_doc, source_section)
+    origin = await db.messages.find_one({"project_id": project_id, "proposals.proposal_id": proposal_id}) if proposal_id else None
+    purposes = list(dict.fromkeys(body.purpose_ids))
+    if doc_id:
+        doc = await db.structured_docs.find_one({"_id": doc_id, "project_id": project_id})
+        if not set(purposes) <= set(doc.get("purpose_ids", [doc["template_id"]])):
+            raise AppError(422, "INVALID_PURPOSE", "원 문서의 목적 중에서 선택해 주세요.")
     if proposal_id:
         existing = await db.tasks.find_one({"user_id": user_id, "source_proposal_id": proposal_id})
         if existing:
@@ -81,6 +94,8 @@ async def create_task(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId
         "user_id": user_id, "project_id": project_id, "title": body.title, "date": body.date.isoformat(),
         "note": body.note, "done": False, "source_doc_id": doc_id, "source_section_id": source_section,
         "source_proposal_id": proposal_id, "deleted_at": None, "revision": 1, "created_at": now, "updated_at": now,
+        "purpose_ids": purposes, "source_conversation_id": (origin or {}).get("conversation_id"),
+        "source_message_id": (origin or {}).get("_id"),
     }
     try:
         task["_id"] = (await db.tasks.insert_one(task)).inserted_id
@@ -102,6 +117,8 @@ async def annotate_proposals(db: AsyncDatabase, messages: list[dict]) -> list[di
             task = found.get(proposal["proposal_id"])
             proposal["task_id"] = task["_id"] if task else None
             proposal["task_status"] = ("trash" if task.get("deleted_at") else "active") if task else None
+            proposal["task"] = {"id": task["_id"], "title": task["title"], "date": task["date"], "done": task["done"],
+                                "purpose_ids": task.get("purpose_ids", [])} if task else None
     return messages
 
 

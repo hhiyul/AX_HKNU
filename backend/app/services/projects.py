@@ -22,6 +22,7 @@ from app.storage import delete_file
 # 프로젝트에 딸린 자료. 프로젝트를 완전히 지우면 함께 지운다.
 CHILD_COLLECTIONS = [
     "items", "cost_sheets", "messages", "conversations", "ai_runs", "structured_docs", "doc_sections", "tasks", "ledger_entries",
+    "products", "contacts", "task_registrations",
 ]
 STAGE_LABELS = {"planning": "기획", "prototype": "시제품", "ready": "판매 준비", "selling": "판매 중"}
 NO_BRAND = "none"

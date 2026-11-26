@@ -24,6 +24,7 @@ class RunCreate(RequestModel):
     reference_body: Annotated[str, StringConstraints(max_length=50000)] | None = None
     # 메시지를 보낼 대화(GET /projects/{id}/conversations). 비우면 가장 최근 대화, 없으면 새 대화
     conversation_id: str | None = None
+    continuation_of: str | None = None
 
 
 class RunStarted(BaseModel):

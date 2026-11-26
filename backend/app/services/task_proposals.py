@@ -99,8 +99,8 @@ class ProposalJob(doc_assist.AssistJob):
         await self.emit("context_ready", "고른 참고 정보를 확인했습니다.")
         self.budget = Budget()
         prepared = await prepare(
-            self.provider, self._prefix(), [], self._instruction(), [SUGGEST_TOOL], self.emit, self.runtime.model,
-            self.budget, None, False, None, self._observe_count,
+            self.provider, self._prefix(), self.target["history"], self._instruction(), [SUGGEST_TOOL], self.emit, self.runtime.model,
+            self.budget, None, False, None, self._observe_count, self.images,
         )
         await self.emit("generating", "할 일 후보를 찾고 있습니다.")
         calls = await self._stream_once(prepared.wire)

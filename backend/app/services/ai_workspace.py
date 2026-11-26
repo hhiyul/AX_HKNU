@@ -39,6 +39,7 @@ async def _doc_sections(db: AsyncDatabase, project_id: ObjectId) -> dict[str, di
         sections[f"doc:{doc['_id']}"] = {
             "kind": "structured_doc",
             "title": doc["title"],
+            "revision": doc["revision"], "read_status": "partial" if any(len(s["text"]) > MAX_SECTION_CHARS for s in view["sections"]) else "read",
             "template": TEMPLATE_NAMES.get(doc["template_id"], doc["template_id"]),
             "progress": f"필수 항목 {view['progress']['required_reviewed']}/{view['progress']['required_total']} 검토 완료",
             "sections": [
@@ -58,13 +59,14 @@ async def _tasks(db: AsyncDatabase, project_id: ObjectId, today: dt.date) -> dic
             done += 1
             continue
         if len(open_tasks) < MAX_TASKS:
-            item = {"title": task["title"], "date": task["date"], "overdue": task["date"] < today.isoformat()}
+            item = {"id": str(task["_id"]), "revision": task.get("revision"), "title": task["title"], "date": task["date"], "overdue": task["date"] < today.isoformat()}
             if task.get("note"):
                 item["note"] = _clip(task["note"], 200)
             open_tasks.append(item)
     if not open_tasks and not done:
         return None
-    return {"kind": "tasks", "open": open_tasks, "done_count": done}
+    total = await db.tasks.count_documents({**query, "done": False})
+    return {"kind": "tasks", "open": open_tasks, "done_count": done, "has_more": total > len(open_tasks)}
 
 
 async def _economics(db: AsyncDatabase, project_id: ObjectId) -> dict | None:

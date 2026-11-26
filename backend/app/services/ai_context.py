@@ -13,7 +13,7 @@ from pymongo.asynchronous.database import AsyncDatabase
 
 from app.ai.context import history_summary_text
 from app.schemas.projects import MAX_CHIP_REFS
-from app.services import ai_runs, ai_workspace, overview
+from app.services import ai_runs, ai_workspace, overview, reference_scope
 from app.services.assets import DOCX_TYPE, decode_text
 from app.storage import file_path
 
@@ -66,6 +66,7 @@ async def _record_sections(db: AsyncDatabase, project_id: ObjectId) -> dict[str,
         f"record:{record['key']}": {
             "source": "this_project", "kind": "record", "title": record.get("title"),
             "content": record.get("content"), "revision": record.get("revision"),
+            "derived_source_keys": record.get("source_keys"), "derived": bool(record.get("message_id")),
         }
         async for record in cursor
     }
@@ -135,18 +136,29 @@ async def file_sections(
     ids = list(dict.fromkeys([*(extra_ids or []), *(project.get("file_refs") or [])]))
     if not ids:
         return {}
-    query = {"_id": {"$in": ids}, "user_id": user_id, "mime_type": {"$in": [*TEXT_TYPES, DOCX_TYPE]}}
+    query = {"_id": {"$in": ids}, "user_id": user_id}
     found = {asset["_id"]: asset async for asset in db.assets.find(query)}
     sections: dict[str, dict] = {}
-    for ident in [ident for ident in ids if ident in found][:MAX_FILES]:
+    for index, ident in enumerate(ids):
+        if ident not in found:
+            sections[f"file:{ident}"] = {"source": "attachment", "read_status": "unavailable", "content": "The selected file is unavailable; its content was not read."}
+            continue
         asset = found[ident]
+        if asset.get("mime_type") not in (*TEXT_TYPES, DOCX_TYPE) or index >= MAX_FILES:
+            sections[f"file:{ident}"] = {"source": "attachment", "name": asset.get("file_name"), "read_status": "unsupported" if index < MAX_FILES else "not_read",
+                                       "content": "This file was not read as text. Use read_source for supported text, or explicit image input for images."}
+            continue
         text = await asyncio.to_thread(_read_file, asset)
         if text is None:
+            sections[f"file:{ident}"] = {"source": "attachment", "name": asset.get("file_name"), "read_status": "failed", "content": "File text could not be decoded or loaded. Do not infer content from its name."}
             continue
+        length = len(text)
         if len(text) > MAX_FILE_CHARS:
             text = text[:MAX_FILE_CHARS] + CUT_MARK
         sections[f"file:{ident}"] = {
             "source": "attachment", "name": asset.get("file_name"), "mime_type": asset.get("mime_type"), "content": text,
+            "read_status": "partial" if length > MAX_FILE_CHARS else "read", "length": min(length, MAX_FILE_CHARS),
+            "next_offset": MAX_FILE_CHARS if length > MAX_FILE_CHARS else None,
         }
     return sections
 
@@ -169,13 +181,14 @@ def _history_item(message: dict) -> dict:
     content = message["content"]
     if role == "assistant" and message.get("completion", "COMPLETE") != "COMPLETE":
         content = PARTIAL_MARK + content
-    sources = [str(ident) for ident in message.get("source_ids") or []]
+    sources = [str(ident) for ident in message.get("source_ids") or []] + list(message.get("source_keys") or [])
     return {"id": str(message["_id"]), "role": role, "content": content, "source_ids": sources}
 
 
 async def load_history(
     db: AsyncDatabase, project_id: ObjectId, exclude_message_id: ObjectId, active_file_ids: set[str] = frozenset(),
     conversation_id: ObjectId | None = None,
+    scope: dict | None = None,
 ) -> tuple[list[dict], int]:
     """이전 대화와 지금 압축 요약의 번호.
 
@@ -187,16 +200,33 @@ async def load_history(
     if conversation_id is not None:
         query["conversation_id"] = conversation_id
     cursor = db.messages.find(query).sort("ordinal", 1)
-    history = [
-        item async for item in (_history_item(message) async for message in cursor)
-        if set(item["source_ids"]) <= set(active_file_ids)
-    ]
+    access = {}
+    if scope is not None:
+        from app.services.source_reader import SourceReader
+        project = await db.projects.find_one({"_id": project_id})
+        reader = SourceReader(db, project, project["user_id"], scope)
+    history = []
+    for message in await cursor.to_list():
+        item = _history_item(message)
+        if scope is not None and "source_keys" not in message and reference_scope.restricted(scope):
+            # 예전 이력의 파생 출처를 확인할 수 없으면 새 입력에서만 제외한다.
+            continue
+        if scope is not None:
+            for key in message.get("source_keys", []):
+                if key not in access:
+                    access[key] = await reader.available(key)
+            if any(not access[key] for key in message.get("source_keys", [])):
+                continue
+        if all(reference_scope.allows(scope, key) if scope is not None and (":" in key or key in ("project_basic", "linked_brand", "tasks", "economics", "ledger", "project_memo") or key.startswith("ck_"))
+               else key in active_file_ids for key in item["source_ids"]):
+            history.append(item)
     capsule = await ai_runs.load_capsule(db, project_id, conversation_id)
     if not capsule:
         return history, 0
     covered = set(capsule["covered_ids"])
     capsule_sources = list(capsule.get("source_ids") or [])
-    if covered and covered <= {item["id"] for item in history} and set(capsule_sources) <= set(active_file_ids):
+    valid_sources = set(active_file_ids) | {key for item in history for key in item["source_ids"]}
+    if covered and covered <= {item["id"] for item in history} and set(capsule_sources) <= valid_sources:
         summary = {
             "id": "capsule",
             "role": "user",

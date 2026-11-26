@@ -135,14 +135,21 @@ class ToolBox:
         route_offered: bool = False,
         record_offered: bool = False,
         read_offered: bool = True,
+        source_reader=None,
+        task_offered: bool = False,
     ):
         self.emit = emit
+        self.source_reader = source_reader
+        self.proposals: list[dict] = []
         self.provider = provider
         self.sections = sections
         self.search_allowed = search_allowed
         self.public_search_terms = public_search_terms
         self.allowed_words = set(re.findall(r"\w+", public_search_terms.casefold()))
         self.tools: list[dict] = [ai_context.READ_TOOL] if read_offered else []
+        if source_reader is not None:
+            from app.services.source_reader import TOOLS
+            self.tools.extend(TOOLS)
         self.extra_prefix: list[dict] = []
         if search_enabled:
             self.tools.append(GENERAL_SEARCH_TOOL)
@@ -153,6 +160,9 @@ class ToolBox:
             self.tools.append(ROUTE_TOOL)
         if record_offered:
             self.tools.append(RECORD_TOOL)
+        if task_offered:
+            from app.services.task_proposals import SUGGEST_TOOL
+            self.tools.append({**SUGGEST_TOOL, "description": "Prepare up to five task candidates from this conversation. No registration occurs. Dates require user confirmation; use null when unknown. Never claim a task was registered or changed."})
         # AI가 만든 기록 검토안 {title, content}. 답변 메시지에 함께 남긴다.
         self.record_draft: dict | None = None
         # 검색으로 확인한 출처 주소. 문서의 출처 기록에 쓴다.
@@ -176,7 +186,18 @@ class ToolBox:
                 args = json.loads(call.get("arguments") or "{}")
             except (TypeError, ValueError):
                 raise ContextError("INVALID_TOOL_ARGUMENTS") from None
-            if call["name"] == "read_project_sections":
+            if self.source_reader is not None and call["name"] in {"search_sources", "read_source", "query_tasks"}:
+                from app.services.source_reader import dispatch
+                try:
+                    result = await dispatch(self.source_reader, call["name"], args)
+                except (ValueError, TypeError):
+                    raise ContextError("INVALID_TOOL_ARGUMENTS") from None
+            elif call["name"] == "suggest_tasks":
+                from app.services import home
+                from app.services.task_proposals import parse_proposals
+                self.proposals = parse_proposals(call.get("arguments"), home.korean_today())
+                result = {"status": "confirmation_required", "count": len(self.proposals), "registered": False}
+            elif call["name"] == "read_project_sections":
                 result = await self._read(args)
             elif call["name"] == "propose_record":
                 result = await self._propose_record(args)

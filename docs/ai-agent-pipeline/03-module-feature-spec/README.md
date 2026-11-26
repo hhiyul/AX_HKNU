@@ -4,7 +4,7 @@
 
 **2026-11-26 구현 전 보완:** [에이전트 기능 보완 명세](agent-capability-contracts-2026-11-26.md)는 Figma·현재 앱의 CAP-01~12 차이, 자료/일정 조회와 확인 등록의 논리 계약, 공동 owner 제공물, ACAP-01~18 인수 계획을 정리합니다. 현재 일정 읽기는 일부 존재하며 일반 대화의 할 일 제안 연결은 별도로 필요합니다. 기존 일정 변경 권한을 자동 추가하지 않으며 코드·Grill·HandOff는 변경하지 않았습니다. 실행 인수는 NOT_RUN입니다.
 
-[구현 Phase 계획](agent-implementation-phases-2026-11-26.md)은 AG-P0~6의 작업 순서·사용자 확인 시나리오·완료 조건·공동 계약 의존성과 검증 방법을 정리합니다. 계획 작성 상태이며 구현·시험은 미착수입니다.
+[구현 Phase 계획](agent-implementation-phases-2026-11-26.md)은 AG-P0~6의 작업 순서·사용자 확인 시나리오·완료 조건·공동 계약 의존성과 검증 방법을 정리합니다. 후속 [AG-P0~5 구현·검증 기록](agent-implementation-progress-2026-11-26.md)에 실제 코드 연결, 백엔드 465개·프런트 3개 테스트, 공개 API/저장 계약, 남은 UAT·정책을 기록했습니다. 화면 자동 확인은 도구 연결 오류로 미완료이며 실제 UAT·배포는 수행하지 않았습니다.
 
 ## 과거 모듈 단계의 상태와 자료
 
@@ -25,6 +25,7 @@
 | [AI Pipeline 개정 계약](ai-pipeline-contract-revision-2026-11-25.md) | GD-046~070·Figma의 모듈 적용 기준. 입력/상태·대체 범위·내부 설계/공동 계약/문서 정책 잔여 |
 | [에이전트 기능 보완 명세](agent-capability-contracts-2026-11-26.md) | 현재 앱과 Figma 차이, 검색·읽기·후보·확인 등록·문서/파일/실행 경로의 구현 전 계약과 남은 권한·공동 제공물 |
 | [에이전트 구현 Phase 계획](agent-implementation-phases-2026-11-26.md) | AG-P0~6의 작업 단위·의존성·완료 조건·데이터 이행·시험과 첫 실행 시나리오 |
+| [AG-P0~5 구현·검증 기록](agent-implementation-progress-2026-11-26.md) | 실제 구현 경로·API/정본 계약·단위/API 통합 결과·ACAP 대응·화면 확인 제한과 UAT 준비 |
 | [Grill 기능 결정표](grill-feature-decisions.md) | 사용자 채택 원문·이유·반례 보존. GD-046~070은 R2 정본/인수/논리 계약으로 통합됨 |
 | [GrillMe 행동 방침과 질문 트리](grillme-operating-policy.md) | 기둥질문 우선 순회 → 필요한 가지질문 → 공동·물리 계약 순서, 질문·반례 검토·결정 선기록 기준과 현재 진행 상태 |
 | [모듈 기능명세 v0.1](ai-pipeline-module-feature-spec-v0.1.md) | M-01~08 책임 개요, 13절의 M-01/06 타입·포트·상태·오류·실제 payload/파싱, 13.11~12의 발송 전 검증·CT-01~24/AD-01~10 시험 기대값, MC-01~12 진행 상태 |

@@ -6,6 +6,7 @@ from app.deps import Workspace
 from app.schemas import tasks as schema
 from app.schemas.common import to_api
 from app.services import tasks
+from app.services import task_registration
 
 router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 
@@ -13,6 +14,16 @@ router = APIRouter(prefix="/projects/{project_id}/tasks", tags=["tasks"])
 @router.get("", response_model=list[schema.TaskOut])
 async def list_tasks(status: str = Query("active", pattern="^(active|trash)$"), ws: Workspace = Depends()):
     return to_api(await tasks.list_tasks(ws.db, ws.project_id, status))
+
+
+@router.post("/registrations")
+async def register_tasks(body: schema.TaskBatch, ws: Workspace = Depends()):
+    return to_api(await task_registration.register(ws.db, ws.user_id, ws.project_id, body))
+
+
+@router.get("/registrations/{request_id}")
+async def registration_result(request_id: str, ws: Workspace = Depends()):
+    return to_api(await task_registration.result(ws.db, ws.user_id, ws.project_id, request_id))
 
 
 @router.post("", response_model=schema.TaskOut, status_code=201)

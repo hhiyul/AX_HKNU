@@ -8,7 +8,7 @@ export default defineConfig({
     // npm run dev 에서도 nginx와 같게 /api 를 백엔드로 넘긴다.
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.AX_API_PROXY_TARGET || 'http://localhost:8000',
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },

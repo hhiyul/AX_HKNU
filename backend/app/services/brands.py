@@ -70,6 +70,9 @@ async def delete_brand(db: AsyncDatabase, user_id: ObjectId, brand_id: str) -> N
     await remove_jobs(db, ident, AppError(409, "BRAND_IN_USE", "브랜드에 진행 중인 작업이 있습니다."))
     # 브랜드 정보만 지운다. 연결된 프로젝트와 그 자료는 "브랜드 없음"으로 남긴다.
     await db.projects.update_many(ident, {"$set": {"brand_id": None}})
+    await db.contacts.delete_many({**ident, "project_id": None})
+    await db.contacts.update_many({**ident, "project_id": {"$ne": None}}, {"$set": {"brand_id": None}})
+    await db.products.update_many(ident, {"$set": {"brand_id": None}})
     await db.assets.update_many({**ident, "project_id": {"$ne": None}}, {"$set": {"brand_id": None}})
     # 브랜드에만 속한 파일(로고 등)은 함께 지운다.
     async for asset in db.assets.find(ident):

@@ -232,6 +232,9 @@ async def create_item(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId
     key = f"m{message['_id']}" if message else str(ObjectId())
     ident = {"user_id": user_id, "project_id": project_id, "kind": kind, "key": key}
     changes = {"title": title, "content": content, "message_id": message["_id"] if message else None}
+    if message:
+        changes.update(source_keys=message.get("source_keys"), source_manifest=message.get("source_manifest", []),
+                       origin_conversation_id=message.get("conversation_id"))
     if kind == "document":
         changes["draft"] = None
         # AI가 만든 문서면 어떤 자료로 만들었는지(출처)를 함께 남긴다.

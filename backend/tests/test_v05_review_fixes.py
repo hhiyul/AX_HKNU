@@ -92,7 +92,9 @@ def test_wire_without_tools_has_no_tool_fields():
 
 
 # 5. 첨부를 읽지 않으면 AI에게 그 사실을 알린다
-async def test_unread_attachments_are_mentioned(ctx, use_runtime):
+async def test_unread_attachments_are_mentioned(ctx, use_runtime, monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "ai_read_attachments", False)
     project_id = ctx["url"].rsplit("/", 1)[-1]
     asset = (await ctx["client"].post("/assets", data={"project_id": project_id, "asset_type": "document"},
                                       files={"file": ("견적.txt", "비밀 견적".encode(), "text/plain")})).json()

@@ -2,7 +2,7 @@
 import datetime as dt
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 from app.schemas.common import RequestModel, Revision
 
@@ -19,6 +19,12 @@ class TaskCreate(RequestModel):
     source_doc_id: str | None = None
     source_section_id: str | None = None
     source_proposal_id: str | None = None
+    purpose_ids: list[Literal["funding", "business_plan"]] = Field(default_factory=list, max_length=2)
+
+
+class TaskBatch(RequestModel):
+    request_id: Annotated[str, StringConstraints(pattern=r"^[a-zA-Z0-9_-]{1,80}$")]
+    tasks: list[TaskCreate] = Field(min_length=1, max_length=20)
 
 
 class TaskUpdate(RequestModel):
@@ -47,6 +53,9 @@ class TaskOut(BaseModel):
     done: bool
     source: TaskSource | None = None
     source_proposal_id: str | None = None
+    source_conversation_id: str | None = None
+    source_message_id: str | None = None
+    purpose_ids: list[str] = []
     status: Literal["active", "trash"]
     # 같은 AI 후보로 이미 등록돼 있던 일정을 돌려줬으면 true
     existing: bool = False

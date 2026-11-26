@@ -1,7 +1,8 @@
 // 저장함(프로토타입 문서 카드 틀): 새 문서 시작(두 작성 틀) + 이 프로젝트의 문서.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { docs, errorText } from '../api/index.js'
-import { newKey } from '../api/client.js'
+import DocumentStart from '../components/DocumentStart.jsx'
+import CatalogManager from '../components/CatalogManager.jsx'
 import { go, paths } from '../router.js'
 import Materials from '../components/Materials.jsx'
 import { formatDate, Progress } from '../components/ui.jsx'
@@ -14,25 +15,12 @@ const TEMPLATES = [
 export default function Docs({ projectId }) {
   const [list, setList] = useState(null)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [starting, setStarting] = useState(null)
   // 같은 버튼을 여러 번 눌러도 문서는 하나만 생기게 틀마다 같은 Idempotency-Key를 쓴다.
-  const keys = useRef({})
 
   useEffect(() => {
     docs.list(projectId).then(setList).catch((err) => setError(errorText(err)))
   }, [projectId])
-
-  const create = async (templateId) => {
-    keys.current[templateId] ||= newKey()
-    setBusy(true)
-    try {
-      const doc = await docs.create(projectId, templateId, keys.current[templateId])
-      go(paths.doc(projectId, doc.id))
-    } catch (err) {
-      setError(errorText(err))
-      setBusy(false)
-    }
-  }
 
   return (
     <div className="workspace-page">
@@ -49,7 +37,7 @@ export default function Docs({ projectId }) {
         <p className="muted small" style={{ margin: '4px 0 14px' }}>작성 틀을 고르면 항목이 미리 나뉘어 있어요.</p>
         <div className="doc-new">
           {TEMPLATES.map(([id, name, desc]) => (
-            <button key={id} type="button" disabled={busy} onClick={() => create(id)}>
+            <button key={id} type="button" onClick={() => setStarting(id)}>
               <strong>＋ {name}</strong><span>{desc}</span>
             </button>
           ))}
@@ -81,6 +69,8 @@ export default function Docs({ projectId }) {
       </section>
       <div className="gap" />
       <Materials projectId={projectId} />
+      <CatalogManager projectId={projectId} />
+      {starting && <DocumentStart projectId={projectId} templateId={starting} onClose={() => setStarting(null)} />}
     </div>
   )
 }

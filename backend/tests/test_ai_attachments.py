@@ -143,7 +143,10 @@ async def test_images_are_not_read(setup, use_runtime):
     await set_refs(setup, [image_id])
     provider = FakeProvider([answer("답")])
     await start(setup, use_runtime(provider))
-    assert f"file:{image_id}" not in wire_text(provider.calls[0])
+    # 프로젝트 참고 이미지의 목록/미지원 상태를 알리되 원본 이미지는 자동 전송하지 않는다.
+    assert f"file:{image_id}" in wire_text(provider.calls[0])
+    assert 'unsupported' in wire_text(provider.calls[0])
+    assert 'input_image' not in wire_text(provider.calls[0])
 
 
 async def test_long_file_is_cut(setup, use_runtime):

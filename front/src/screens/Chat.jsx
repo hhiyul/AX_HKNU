@@ -6,6 +6,10 @@ import { followRun } from '../api/stream.js'
 import { FILE_ACCEPT, FileChips, PHOTO_ACCEPT, uploadFiles } from '../components/Attachments.jsx'
 import ConversationPanel from '../components/ConversationPanel.jsx'
 import Markdown from '../components/Markdown.jsx'
+import ReferenceScope, { AnswerSources } from '../components/ReferenceScope.jsx'
+import TaskConfirmation from '../components/TaskConfirmation.jsx'
+import RecordConfirmation from '../components/RecordConfirmation.jsx'
+import DocumentStart from '../components/DocumentStart.jsx'
 import { go, paths } from '../router.js'
 
 const PURPOSE = { document_assist: '문서 작성 도움', task_proposal: '할 일 제안' }
@@ -36,6 +40,8 @@ export default function Chat({ projectId, conversationId }) {
   const [elsewhere, setElsewhere] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [documentMessage, setDocumentMessage] = useState(null)
   // 화면을 떠나면 열어 둔 스트림을 닫는다.
   const closeStream = useRef(null)
   useEffect(() => () => closeStream.current?.(), [])
@@ -126,6 +132,13 @@ export default function Chat({ projectId, conversationId }) {
     }
   }
 
+  const continueAnswer = async (message) => {
+    if (running) return
+    setError(''); setRunning(true)
+    try { const result = await chat.continue(projectId, currentId, message.id); follow(result.run_id, currentId) }
+    catch (e) { setRunning(false); setError(errorText(e)) }
+  }
+
   // 실행 하나를 끝까지 따라간다. 새로 보낸 질문과, 새로고침·화면 이동 뒤 이어 받는 답변이 함께 쓴다.
   // elsewhere: 다른 대화의 실행이라 이 화면에는 답변 글을 그리지 않고 안내만 한다.
   const follow = (runId, cid, { elsewhere = false } = {}) => {
@@ -189,6 +202,7 @@ export default function Chat({ projectId, conversationId }) {
     <div className={`chat-layout${panelOpen ? ' conversation-panel-open' : ''}`}>
       <section className="chat">
         <div className="chat-local-toolbar">
+          <button type="button" disabled={!currentId || running} onClick={() => setScopeOpen(true)}>참고 범위</button>
           <span className="chat-conversation-label">{threads === null ? '' : current?.title || (currentId ? '새 대화' : '첫 질문을 보내면 대화가 시작돼요')}</span>
           <div className="chat-mobile-actions">
             <button type="button" disabled={running} onClick={startNew}>＋ 새 대화</button>
@@ -209,6 +223,11 @@ export default function Chat({ projectId, conversationId }) {
             <article key={m.id} className="msg assistant">
               <div className="name">AX STUDIO{m.purpose && <span className="muted"> · {PURPOSE[m.purpose] || m.purpose}</span>}</div>
               <Markdown>{m.content}</Markdown>
+              <AnswerSources projectId={projectId} conversationId={currentId} sources={m.source_manifest} />
+              <TaskConfirmation projectId={projectId} proposals={m.proposals} originKey={m.id} onChanged={load} />
+              <RecordConfirmation projectId={projectId} message={m} onChanged={load} />
+              {m.role === 'ASSISTANT' && m.completion === 'COMPLETE' && <button type="button" onClick={() => setDocumentMessage(m)}>이 답변으로 문서 시작</button>}
+              {m.role === 'ASSISTANT' && m.completion === 'PARTIAL' && !m.purpose && <button type="button" disabled={running} onClick={() => continueAnswer(m)}>남은 내용 이어서 생성</button>}
             </article>
           )))}
           {sentDraft && <div className="msg user"><FileChips items={sentDraft.files} /><p>{sentDraft.content}</p></div>}
@@ -252,6 +271,8 @@ export default function Chat({ projectId, conversationId }) {
         <ConversationPanel projectId={projectId} list={threads || []} currentId={currentId} open={panelOpen}
           onSelect={select} onNew={startNew} onClose={() => setPanelOpen(false)} onChanged={afterChange} />
       </div>
+      {scopeOpen && <ReferenceScope key={currentId} projectId={projectId} conversationId={currentId} onClose={() => setScopeOpen(false)} />}
+      {documentMessage && <DocumentStart projectId={projectId} message={documentMessage} onClose={() => setDocumentMessage(null)} />}
     </div>
   )
 }

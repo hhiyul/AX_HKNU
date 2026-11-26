@@ -70,13 +70,32 @@ async def doc_view(db: AsyncDatabase, doc: dict, with_sections: bool = True) -> 
     return view
 
 
-async def create_doc(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId, template_id: str, title: str | None) -> dict:
+async def create_doc(db: AsyncDatabase, user_id: ObjectId, project_id: ObjectId, template_id: str, title: str | None,
+                     origin_message_id: str | None = None, product_ids: list[str] = ()) -> dict:
     template = templates.latest(template_id)
+    from app.services import catalog, reference_scope
+    project = await db.projects.find_one({"_id": project_id, "user_id": user_id})
+    snapshots = await catalog.snapshot(db, project, user_id, product_ids)
+    origin = None
+    scope = reference_scope.normalize(None)
+    if origin_message_id:
+        origin = await db.messages.find_one({"_id": parse_object_id(origin_message_id), "project_id": project_id, "role": "ASSISTANT"})
+        if not origin or origin.get("completion", "COMPLETE") != "COMPLETE" or not origin.get("conversation_id"):
+            raise AppError(422, "INVALID_ORIGIN", "완료된 대화 답변 한 건을 선택해 주세요.")
+        conversation = await db.conversations.find_one({"_id": origin["conversation_id"], "project_id": project_id, "deleted_at": None})
+        if not conversation:
+            raise not_found()
+        scope = reference_scope.normalize(conversation.get("reference_scope"))
+        scope["message_ids"] = []  # Inherit exclusions, not unrelated past-chat selections.
     now = utcnow()
     doc = {
         "user_id": user_id, "project_id": project_id, "title": title or template.name,
         "template_id": template.template_id, "template_version": template.version, "last_section_id": None,
         "deleted_at": None, "revision": 1, "created_at": now, "updated_at": now,
+        "purpose_ids": [template_id], "product_snapshots": snapshots,
+        "origin_message_id": origin["_id"] if origin else None,
+        "origin_conversation_id": origin["conversation_id"] if origin else None,
+        "origin_scope": scope, "origin_section_id": template.sections[0].section_id,
     }
     doc["_id"] = (await db.structured_docs.insert_one(doc)).inserted_id
     await db.doc_sections.insert_many([

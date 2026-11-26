@@ -8,10 +8,27 @@ from app.schemas.common import to_api
 from app.ai.runtime import get_runtime
 from app.schemas.workspace import MessageOut
 from app.services import doc_assist, exports, structured_docs, task_proposals, templates
+from app.services import item_context
+from app.services import document_inspection
 
 template_router = APIRouter(prefix="/templates", tags=["docs"])
 router = APIRouter(prefix="/projects/{project_id}/docs", tags=["docs"])
 SECTION = "/{doc_id}/sections/{section_id}"
+
+
+@router.get("/{doc_id}/inspection")
+async def inspect_document(doc_id: str, ws: Workspace = Depends()):
+    return await document_inspection.inspect(ws.db, ws.project, ws.user_id, doc_id)
+
+
+@router.get(SECTION + "/assist-context")
+async def get_assist_context(doc_id: str, section_id: str, ws: Workspace = Depends()):
+    return await item_context.get(ws.db, ws.project_id, doc_id, section_id)
+
+
+@router.put(SECTION + "/assist-context")
+async def save_assist_context(doc_id: str, section_id: str, body: schema.AssistContextSave, ws: Workspace = Depends()):
+    return await item_context.save(ws.db, ws.project_id, doc_id, section_id, body)
 
 
 @template_router.get("")
@@ -29,7 +46,7 @@ async def list_docs(status: str = Query("active", pattern="^(active|trash)$"), w
 async def create_doc(body: schema.DocCreate, once: Once = Depends(), ws: Workspace = Depends()):
     """새 문서는 한 번만 만든다. 화면은 Idempotency-Key를 붙여 중복 클릭을 하나로 처리한다."""
     return to_api(await once.run(
-        lambda: structured_docs.create_doc(ws.db, ws.user_id, ws.project_id, body.template_id, body.title)
+        lambda: structured_docs.create_doc(ws.db, ws.user_id, ws.project_id, body.template_id, body.title, body.origin_message_id, body.product_ids)
     ))
 
 

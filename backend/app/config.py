@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     # 비우면 OpenAI는 none, 게이트웨이는 low. 게이트웨이는 low·medium·high만 받는다.
     openai_reasoning_effort: Literal["", "none", "low", "medium", "high"] = ""
-    # 기획서 v2: 첨부 원본은 AI가 자동으로 읽지 않는다. true면 참고 파일의 TXT·MD·DOCX를 읽어 넘긴다.
-    ai_read_attachments: bool = False
+    # GD-048: 명시한 참고 파일의 TXT·MD·DOCX 원문을 읽는다. 운영 설정으로 끌 때는 미독 상태를 알린다.
+    ai_read_attachments: bool = True
     # 채팅에 붙인 사진(PNG·JPEG·WebP)을 AI가 보게 한다. 글 파일 읽기(위)와 따로 켜고 끈다.
     ai_read_images: bool = True
 

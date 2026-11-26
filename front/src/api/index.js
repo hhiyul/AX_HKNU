@@ -62,8 +62,11 @@ export const docs = {
   templates: () => api.get('/templates'),
   list: (projectId) => api.get(`${P(projectId)}/docs`),
   get: (projectId, docId) => api.get(`${P(projectId)}/docs/${docId}`),
-  create: (projectId, templateId, key) =>
-    api.post(`${P(projectId)}/docs`, { template_id: templateId }, { idempotencyKey: key }),
+  create: (projectId, templateId, key, selection = {}) =>
+    api.post(`${P(projectId)}/docs`, { template_id: templateId, ...selection }, { idempotencyKey: key }),
+  assistContext: (projectId, docId, sectionId) => api.get(`${P(projectId)}/docs/${docId}/sections/${sectionId}/assist-context`),
+  saveAssistContext: (projectId, docId, sectionId, body) => api.put(`${P(projectId)}/docs/${docId}/sections/${sectionId}/assist-context`, body),
+  inspect: (projectId, docId) => api.get(`${P(projectId)}/docs/${docId}/inspection`),
   saveDraft: (projectId, docId, sectionId, text, draftRevision) =>
     api.put(`${P(projectId)}/docs/${docId}/sections/${sectionId}/draft`, { text, draft_revision: draftRevision }),
   discardDraft: (projectId, docId, sectionId, draftRevision) =>
@@ -87,24 +90,46 @@ export const docs = {
 }
 
 export const tasks = {
+  register: (projectId, requestId, candidates) => api.post(`${P(projectId)}/tasks/registrations`, { request_id: requestId, tasks: candidates }),
+  registration: (projectId, requestId) => api.get(`${P(projectId)}/tasks/registrations/${requestId}`),
   list: (projectId) => api.get(`${P(projectId)}/tasks`),
   create: (projectId, body) => api.post(`${P(projectId)}/tasks`, body),
   update: (projectId, taskId, changes) => api.patch(`${P(projectId)}/tasks/${taskId}`, changes),
 }
 
 export const chat = {
-  messages: (projectId, conversationId) =>
-    api.get(`${P(projectId)}/messages`, { query: { limit: 100, conversation_id: conversationId } }),
+  continue: (projectId, conversationId, messageId) => api.post(`${P(projectId)}/runs`, { text: '이어서 생성', mode: 'chat', conversation_id: conversationId, continuation_of: messageId }),
+  messages: (projectId, conversationId, skip = 0) =>
+    api.get(`${P(projectId)}/messages`, { query: { limit: 100, skip, conversation_id: conversationId } }),
   send: (projectId, text, mode = 'chat', assetIds = [], conversationId) =>
     api.post(`${P(projectId)}/runs`, { text, mode, asset_ids: assetIds, ...(conversationId ? { conversation_id: conversationId } : {}) }),
 }
 
+export const records = {
+  get: (projectId, key) => api.get(`${P(projectId)}/items/record/${key}`),
+  save: (projectId, body, key) => api.post(`${P(projectId)}/items/record`, body, { idempotencyKey: key }),
+  result: (key) => api.get(`/requests/${key}`),
+}
+
 export const conversations = {
+  scope: (projectId, id) => api.get(`${P(projectId)}/conversations/${id}/scope`),
+  saveScope: (projectId, id, scope, revision) => api.put(`${P(projectId)}/conversations/${id}/scope`, { scope, revision }),
   list: (projectId, status = 'active') => api.get(`${P(projectId)}/conversations`, { query: { status } }),
   create: (projectId, title) => api.post(`${P(projectId)}/conversations`, title ? { title } : {}),
   rename: (projectId, id, title, revision) => api.patch(`${P(projectId)}/conversations/${id}`, { title, revision }),
   trash: (projectId, id) => api.del(`${P(projectId)}/conversations/${id}`),
   restore: (projectId, id) => api.post(`${P(projectId)}/conversations/${id}/restore`),
+}
+
+export const aiSources = {
+  search: (projectId, query = '', offset = 0, conversationId) => api.get(`${P(projectId)}/ai-sources`, { query: { query, offset, conversation_id: conversationId } }),
+  read: (projectId, key, offset = 0, conversationId, docId, sectionId) => api.get(`${P(projectId)}/ai-sources/read`, { query: { key, offset, conversation_id: conversationId, doc_id: docId, section_id: sectionId } }),
+}
+
+export const catalog = {
+  list: (projectId, kind) => api.get(`${P(projectId)}/${kind}`),
+  create: (projectId, kind, body, key) => api.post(`${P(projectId)}/${kind}`, body, { idempotencyKey: key }),
+  update: (projectId, kind, id, body) => api.put(`${P(projectId)}/${kind}/${id}`, body),
 }
 
 export const ledger = {

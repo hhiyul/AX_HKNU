@@ -288,7 +288,18 @@ COLLECTIONS = {
 
 UNIQUE = {"unique": True}
 
+COLLECTIONS.update({
+    "products": build_schema({**OWNED, **TIMESTAMPS, "revision": "int", "status": enum("draft", "registered"), "name": "string", "options": "array"},
+                             {"deleted_at": ["date"], "quantity_initialized_at": ["date"]}),
+    "contacts": build_schema({"user_id": "objectId", **TIMESTAMPS, "revision": "int", "name": "string", "scope": enum("project", "brand")},
+                             {"project_id": ["objectId"], "brand_id": ["objectId"], "deleted_at": ["date"]}),
+    "task_registrations": build_schema({"user_id": "objectId", "project_id": "objectId", "created_at": "date", "results": "array"}, {}),
+})
+
 INDEXES = {
+    "products": [([("project_id", ASCENDING), ("updated_at", DESCENDING)], {})],
+    "contacts": [([("user_id", ASCENDING), ("project_id", ASCENDING), ("brand_id", ASCENDING)], {})],
+    "task_registrations": [([("project_id", ASCENDING)], {})],
     "users": [([("email", ASCENDING)], UNIQUE)],
     "brands": [([("user_id", ASCENDING), ("created_at", DESCENDING)], {})],
     "projects": [
